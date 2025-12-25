@@ -23,8 +23,8 @@ macro_rules! expect {
                 if __left != __right {
                     panic!(
                         "expect test failed\n\noutput:\n{}\n\nexpected:\n{}\n",
-                        __left,
-                        __right,
+                        lexpr,
+                        rexpr,
                     );
                 }
             }

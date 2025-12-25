@@ -25,4 +25,22 @@ impl Axis {
         debug_assert!(x < 8);
         unsafe { std::mem::transmute::<u8, Axis>(x) }
     }
+
+    pub const fn primary(self) -> Face {
+        use Axis::*;
+        match self {
+            FB => Face::F,
+            LR => Face::R,
+            UD => Face::U,
+        }
+    }
+
+    pub const fn secondary(self) -> Face {
+        use Axis::*;
+        match self {
+            FB => Face::B,
+            LR => Face::L,
+            UD => Face::D,
+        }
+    }
 }

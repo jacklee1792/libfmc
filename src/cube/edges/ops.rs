@@ -61,10 +61,54 @@ pub fn lane_ep(a: u8x16, i: usize) -> u8 {
     a[i] & EP_LANE_MASK
 }
 
+pub fn eo(a: u8x16) -> u8x16 {
+    (a & EO_MASK) >> EO_SHIFT
+}
+
+pub fn compose_ep(a: u8x16, b: u8x16) -> u8x16 {
+    debug_assert!(b & EO_MASK == u8x16::splat(0));
+
+    a.swizzle_dyn(b & EP_MASK)
+}
+
+pub fn inv_ep(a: u8x16) -> u8x16 {
+    debug_assert!(a & EO_MASK == u8x16::splat(0));
+
+    // Any CP raised to the 27720th power is the identity, since
+    // LCM(1..=12) = 27720 (consider disjoint cycles of EP). Thus to find the inverse
+    // EP, we can take it to the 27719th power.
+    let a2 = compose(a, a);
+    let a3 = compose(a2, a);
+    let a6 = compose(a3, a3);
+    let a12 = compose(a6, a6);
+    let a24 = compose(a12, a12);
+    let a27 = compose(a24, a3);
+    let a54 = compose(a27, a27);
+    let a108 = compose(a54, a54);
+    let a216 = compose(a108, a108);
+    let a432 = compose(a216, a216);
+    let a433 = compose(a432, a);
+    let a866 = compose(a433, a433);
+    let a1732 = compose(a866, a866);
+    let a3464 = compose(a1732, a1732);
+    let a6928 = compose(a3464, a3464);
+    let a13856 = compose(a6928, a6928);
+    let a13859 = compose(a13856, a3);
+    let a27718 = compose(a13859, a13859);
+    let a27719 = compose(a27718, a);
+
+    a27719
+}
+
+pub fn compose(a: u8x16, b: u8x16) -> u8x16 {
+    compose_ep(a, b & EP_MASK) ^ (b & EO_MASK)
+}
+
 /// Get a vector corresponding to EO on FB.
 pub fn eofb(a: u8x16) -> u8x16 {
     (a & EOFB_MASK) >> EOFB_SHIFT
 } 
+
 
 /// Get a vector corresponding to EO on LR.
 pub fn eolr(a: u8x16) -> u8x16 {
@@ -135,19 +179,19 @@ pub fn lane_set_ep(mut a: u8x16, i: usize, ep: u8) -> u8x16 {
 
 // one-hot encoding, eofb to eoud
 pub fn eofb_to_eoud(ep: u8x16) -> u8x16 {
-    let s = ep ^ EDGES_IDENT;
+    let s = (ep ^ EDGES_IDENT) >> 2;
     (u8x16::splat(0b1010) >> s) & u8x16::splat(1)
 }
 
 // one-hot encoding, eofb to eolr
 pub fn eofb_to_eolr(ep: u8x16) -> u8x16 {
-    let s = ep ^ EDGES_IDENT;
+    let s = (ep ^ EDGES_IDENT) >> 2;
     (u8x16::splat(0b1100) >> s) & u8x16::splat(1)
 }
 
 // one hot-encoding, eolr to eoud
 pub fn eolr_to_eoud(ep: u8x16) -> u8x16 {
-    let s = ep ^ EDGES_IDENT;
+    let s = (ep ^ EDGES_IDENT) >> 2;
     (u8x16::splat(0b0110) >> s) & u8x16::splat(1)
 }
 
@@ -175,3 +219,11 @@ pub fn set_eoud(a: u8x16, eoud: u8x16) -> u8x16 {
     cons(eofb, eolr, eoud, ep)
 }
 
+/// A cube that flips the given edges.
+pub fn flip(edges: mask8x16) -> u8x16 {
+    EDGES_IDENT ^ edges.select(
+        EO_MASK,
+        u8x16::splat(0),
+    )
+}
+    

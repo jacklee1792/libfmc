@@ -3,6 +3,10 @@ name = "libfmc"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "fmcspy"
+path = "src/bin/main.rs"
+
 [toolchain]
 channel = "nightly"
 
@@ -12,3 +16,11 @@ criterion = "0.7.0"
 [[bench]]
 name = "edges"
 harness = false
+
+[dependencies]
+aes = "0.8.4"
+anyhow = "1.0.100"
+btleplug = "0.11.8"
+futures-util = "0.3.31"
+thiserror = "2.0.17"
+tokio = "1.48.0"

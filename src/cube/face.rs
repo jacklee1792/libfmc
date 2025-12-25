@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use crate::*;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Face {
@@ -20,6 +21,41 @@ impl Face {
             B => F,
             R => L,
             L => R,
+        }
+    }
+
+    /// The axis perpendicular to this face.
+    pub fn axis(self) -> Axis {
+        use Face::*;
+        match self {
+            U | D => Axis::UD,
+            F | B => Axis::FB,
+            R | L => Axis::LR,
+        }
+    }
+
+    pub fn turn(self, d: Direction) -> Option<Move> {
+        use Direction::*;
+        match (self, d) {
+            (_, Zero) => None,
+            (Face::F, Clockwise) => Some(Move::F),
+            (Face::F, Double) => Some(Move::F2),
+            (Face::F, Counterclockwise) => Some(Move::F3),
+            (Face::B, Clockwise) => Some(Move::B),
+            (Face::B, Double) => Some(Move::B2),
+            (Face::B, Counterclockwise) => Some(Move::B3),
+            (Face::L, Clockwise) => Some(Move::L),
+            (Face::L, Double) => Some(Move::L2),
+            (Face::L, Counterclockwise) => Some(Move::L3),
+            (Face::R, Clockwise) => Some(Move::R),
+            (Face::R, Double) => Some(Move::R2),
+            (Face::R, Counterclockwise) => Some(Move::R3),
+            (Face::U, Clockwise) => Some(Move::U),
+            (Face::U, Double) => Some(Move::U2),
+            (Face::U, Counterclockwise) => Some(Move::U3),
+            (Face::D, Clockwise) => Some(Move::D),
+            (Face::D, Double) => Some(Move::D2),
+            (Face::D, Counterclockwise) => Some(Move::D3),
         }
     }
 }

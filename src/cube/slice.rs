@@ -1,3 +1,5 @@
+use std::fmt::Display;
+use std::fmt::Debug;
 use super::*;
 
 // DANGER !! Not safe to renumber, same as `Axis`
@@ -7,6 +9,12 @@ pub enum Slice {
     S = 0,
     M = 1,
     E = 2,
+}
+
+impl Display for Slice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(self, f)
+    }
 }
 
 impl From<u8> for Slice {

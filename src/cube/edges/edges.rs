@@ -1,10 +1,11 @@
-use std::simd::u8x16;
-use std::simd::cmp::SimdPartialEq;
+use crate::cube::edges::ops;
+use crate::*;
+use std::fmt;
 use std::fmt::Debug;
 use std::ops::Add;
-use std::fmt;
-use crate::{Alg, Move, Edge};
-use crate::cube::edges::ops;
+use std::simd::cmp::SimdPartialEq;
+use std::simd::u8x16;
+use std::simd::mask8x16;
 
 /// Edges of the cube.
 ///
@@ -14,7 +15,7 @@ use crate::cube::edges::ops;
 ///
 /// The underlying representation is a SIMD vector of 16 lanes,
 /// each lane representing a edge slot.
-/// 
+///
 /// Each lane has a packed 8-bit representation, where:
 /// - Bits 0..=3 represent the edge piece at that position (0..=16).
 /// - Bits 4, 5, and 6 represents the orientation of the edge piece with respect to the FB, LR,
@@ -27,7 +28,27 @@ pub struct Edges(pub(super) u8x16);
 
 impl Debug for Edges {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "todo!")
+        let fmt_eo = |eo: EO| match eo {
+            EO::Solved => ".",
+            EO::Flipped => "X",
+        };
+        let index = Edge::all().map(|e| format!("{:>2}", e)).join(" ");
+        let ep = Edge::all().map(|e| format!("{:>2}", self.at(e))).join(" ");
+        let eofb = Edge::all()
+            .map(|e| format!("{:>2}", fmt_eo(self.eofb(e))))
+            .join(" ");
+        let eolr = Edge::all()
+            .map(|e| format!("{:>2}", fmt_eo(self.eolr(e))))
+            .join(" ");
+        let eoud = Edge::all()
+            .map(|e| format!("{:>2}", fmt_eo(self.eoud(e))))
+            .join(" ");
+        writeln!(f, " slot: {index}")?;
+        writeln!(f, "piece: {ep}")?;
+        writeln!(f, " eofb: {eofb}")?;
+        writeln!(f, " eolr: {eolr}")?;
+        writeln!(f, " eoud: {eoud}")?;
+        Ok(())
     }
 }
 
@@ -64,7 +85,9 @@ impl Add<Alg> for Edges {
 impl Edges {
     /// Construct a new `Corners` instance with the identity CP and CO.
     pub const fn new() -> Self {
-        Self(u8x16::from_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]))
+        Self(u8x16::from_array([
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+        ]))
     }
 
     /// The slot where the given `Edge` currently resides.
@@ -77,311 +100,211 @@ impl Edges {
     pub const fn from_magic(m: u128) -> Self {
         Self(u8x16::from_array(m.to_le_bytes()))
     }
-    
+
+    pub const fn magic(self) -> u128 {
+        u128::from_le_bytes(self.0.to_array())
+    }
+
     /// Modify EP by specifying for each location which corner populates it. Preserves EO on FB.
-    pub fn set_ep_passive<F>(mut self, mut f: F) -> Self
+    pub fn set_ep_passive<F>(self, mut f: F) -> Self
     where
         F: FnMut(Edge) -> Edge,
     {
-        let mut a = self.0.to_array();
-        for (i, lane) in a.iter_mut().enumerate() {
-            let slot = Edge::from(i as u8);
+        let mut a = self.0;
+        for slot in (0..12).map(Edge::from) {
             let piece = f(slot);
-            ops::lane_set_ep(a, i, piece as u8);
+            a = ops::lane_set_ep(a, slot as usize, piece as u8);
         }
-        Self(u8x8::from_array(a))
+        Self(a)
     }
 
     /// Modify CP by specifying for each corner where it's located. Preserves CO on UD.
     pub fn set_cp_active<F>(&self, mut f: F) -> Self
     where
-        F: FnMut(Corner) -> Corner,
+        F: FnMut(Edge) -> Edge,
     {
-        let mut a = self.0.to_array();
-        for i in 0..8 {
-            let src = Corner::from(i as u8);
-            let dest = f(src) as usize;
-            let lane = &mut a[dest];
-            *lane = (*lane & CO_LANE_MASK) | (src as u8);
+        let mut a = self.0;
+        for piece in (0..12).map(Edge::from) {
+            let slot = f(piece) as usize;
+            a = ops::lane_set_ep(a, slot as usize, piece as u8);
         }
-        Self(u8x8::from_array(a))
+        Self(a)
     }
 
-    pub fn cycle_dr<I>(cycle: I, axis: Axis) -> Self
-    where I: IntoIterator<Item = Corner>
+    pub fn cycle<I>(cycle: I, axis: Axis) -> Self
+    where
+        I: IntoIterator<Item = Edge>,
     {
         match axis {
-            Axis::UD => Self::cycle_drud(cycle),
-            Axis::FB => Self::cycle_drfb(cycle),
-            Axis::LR => Self::cycle_drlr(cycle),
+            Axis::UD => Self::cycle_eoud(cycle),
+            Axis::FB => Self::cycle_eofb(cycle),
+            Axis::LR => Self::cycle_eolr(cycle),
         }
     }
 
-    /// A cycle which preserves CO on UD. The first slot in the cycle is sent to the second
-    /// slot in the cycle, and so on with the last slot in the cycle being sent to the first slot
-    /// in the cycle.
-    pub fn cycle_drud<I>(cycle: I) -> Self
-    where I: IntoIterator<Item = Corner>
+    /// Just cycle, preserving all EO. Will likely leave the cube in an invalid state
+    fn cycle_ep_only<I>(cycle: I) -> u8x16
+    where
+        I: IntoIterator<Item = Edge>,
     {
         let cycle = cycle.into_iter().collect::<Vec<_>>();
-        let mut cp = CORNERS_IDENT;
+        let mut ep = ops::EDGES_IDENT;
         let n = cycle.len();
         for i in 0..n {
             let src = cycle[i] as u8;
             let dst = cycle[(i + 1) % n] as usize;
-            cp.as_mut_array()[dst] = src;
+            ep[dst] = src;
         }
-        Self(cp)
+        ep
     }
 
-    /// A cycle which preserves CO on FB. The first slot in the cycle is sent to the second
+    /// A cycle which preserves EO on FB. The first slot in the cycle is sent to the second
     /// slot in the cycle, and so on with the last slot in the cycle being sent to the first slot
     /// in the cycle.
-    pub fn cycle_drfb<I>(cycle: I) -> Self
-    where I: IntoIterator<Item = Corner> {
-        let ret = ops::set_cofb(Self::cycle_drud(cycle).0, u8x8::splat(0));
-        Self(ret)
+    pub fn cycle_eofb<I>(cycle: I) -> Self
+    where
+        I: IntoIterator<Item = Edge>,
+    {
+        let ep = Self::cycle_ep_only(cycle);
+        Self(ops::set_eofb(ep, ops::eofb(ep)))
     }
-    
-    /// A cycle which preserves CO on LR. The first slot in the cycle is sent to the second
+
+    /// A cycle which preserves EO on LR. The first slot in the cycle is sent to the second
     /// slot in the cycle, and so on with the last slot in the cycle being sent to the first slot
     /// in the cycle.
-    pub fn cycle_drlr<I>(cycle: I) -> Self
-    where I: IntoIterator<Item = Corner> {
-        let ret = ops::set_colr(Self::cycle_drud(cycle).0, u8x8::splat(0));
-        Self(ret)
+    pub fn cycle_eolr<I>(cycle: I) -> Self
+    where
+        I: IntoIterator<Item = Edge>,
+    {
+        let ep = Self::cycle_ep_only(cycle);
+        Self(ops::set_eolr(ep, ops::eolr(ep)))
+    }
+
+    /// A cycle which preserves EO on UD. The first slot in the cycle is sent to the second
+    /// slot in the cycle, and so on with the last slot in the cycle being sent to the first slot
+    /// in the cycle.
+    pub fn cycle_eoud<I>(cycle: I) -> Self
+    where
+        I: IntoIterator<Item = Edge>,
+    {
+        let ep = Self::cycle_ep_only(cycle);
+        Self(ops::set_eoud(ep, ops::eoud(ep)))
+    }
+
+    /// Flip the given edges. If an edge is provided multiple times, it will flip once for each
+    /// time it's provided.
+    pub fn flip<I>(edges: I) -> Self
+    where I: IntoIterator<Item = Edge>
+    {
+        let mut flips = [false; 16];
+        for edge in edges.into_iter() {
+            flips[edge as usize] = !flips[edge as usize]
+        }
+        Self(ops::flip(mask8x16::from_array(flips)))
     }
 
     pub fn compose(self, rhs: Self) -> Self {
-        let ret = self.0.swizzle_dyn(rhs.0 & CP_MASK) + (rhs.0 & CO_MASK);
-        Self(ret.simd_min(ret - CO_MASK))
+        Self(ops::compose(self.0, rhs.0))
+    }
+
+    /// The edge which current resides at the given slot.
+    pub fn at(self, slot: Edge) -> Edge {
+        Edge::from(ops::lane_ep(self.0, slot as usize))
+    }
+
+    // EO relative to FB axis.
+    pub fn eofb(self, slot: Edge) -> EO {
+        ops::lane_eofb(self.0, slot as usize).into()
+    }
+
+    // EO relative to LR axis.
+    pub fn eolr(self, slot: Edge) -> EO {
+        ops::lane_eolr(self.0, slot as usize).into()
+    }
+
+    // EO relative to UD axis.
+    pub fn eoud(self, slot: Edge) -> EO {
+        ops::lane_eoud(self.0, slot as usize).into()
     }
 
     pub fn inverse(self) -> Self {
-        // Any CP raised to the 840th power is the identity, since
-        // LCM(1..=8) = 840 (consider disjoint cycles of CP). Thus to find the inverse
-        // CP, we can take it to the 839th power.
-        let inv_cp = {
-            let f = |x: Self, y: Self| Self(x.0.swizzle_dyn(ops::cp(y.0)));
-            let s1 = Self(self.0 & CP_MASK);
-            let s2 = f(s1, s1);
-            let s4 = f(s2, s2);
-            let s8 = f(s4, s4);
-            let s16 = f(s8, s8);
-            let s32 = f(s16, s16);
-            let s64 = f(s32, s32);
-            let s65 = f(s64, s1);
-            let s129 = f(s64, s65);
-            let s258 = f(s129, s129);
-            let s516 = f(s258, s258);
-            let s774 = f(s516, s258);
-            let s839 = f(s774, s65);
-            s839
-        };
+        // ok normally you have A.ep + A.eo
+        // inverse is ident + A.eo^-1 + A.ep^-1
+        let inv_eo = (self.0 & ops::EO_MASK) ^ ops::EO_MASK;
+        let inv_ep = ops::inv_ep(ops::ep(self.0));
+        let inv = ops::compose_ep(ops::EDGES_IDENT | inv_eo, inv_ep);
+        Self(inv)
+    }
 
-        let inv_coud = ops::invmod3(ops::coud(self.0));
-        Self(ops::cons(inv_coud, ops::CP_IDENT)).compose(inv_cp)
+    pub fn mov(m: Move) -> Self {
+        use Move::*;
+        match m {
+            U => Edges::from_magic(0xf0e0d0c0b0a09084306054044020147),
+            U2 => Edges::from_magic(0xf0e0d0c0b0a09080406050700020103),
+            U3 => Edges::from_magic(0xf0e0d0c0b0a09084006054347020144),
+            D => Edges::from_magic(0xf0e0d0c0b0a09080741420403464500),
+            D2 => Edges::from_magic(0xf0e0d0c0b0a09080705060403010200),
+            D3 => Edges::from_magic(0xf0e0d0c0b0a09080742410403454600),
+            F => Edges::from_magic(0xf0e0d0c150a09140706181b03020100),
+            F2 => Edges::from_magic(0xf0e0d0c080a090b0706040503020100),
+            F3 => Edges::from_magic(0xf0e0d0c140a091507061b1803020100),
+            B => Edges::from_magic(0xf0e0d0c0b171608191a050403020100),
+            B2 => Edges::from_magic(0xf0e0d0c0b090a080607050403020100),
+            B3 => Edges::from_magic(0xf0e0d0c0b1617081a19050403020100),
+            R => Edges::from_magic(0xf0e0d0c0b0a20210706050403022928),
+            R2 => Edges::from_magic(0xf0e0d0c0b0a08090706050403020001),
+            R3 => Edges::from_magic(0xf0e0d0c0b0a21200706050403022829),
+            L => Edges::from_magic(0xf0e0d0c23220908070605042a2b0100),
+            L2 => Edges::from_magic(0xf0e0d0c0a0b09080706050402030100),
+            L3 => Edges::from_magic(0xf0e0d0c22230908070605042b2a0100),
+        }
     }
 
     pub fn apply_move(self, m: Move) -> Self {
-        // // use Face::*;
-        // // use Corner::*;
-        // let (f, n) = m.decompose();
-        // let c = match f {
-        //     U => Corners::cycle_drud([UFR, UFL, UBL, UBR]),
-        //     F => Corners::cycle_drfb([UFR, DFR, DFL, UFL]),
-        //     R => Corners::cycle_drlr([UFR, UBR, DBR, DFR]),
-        //     D => Corners::cycle_drud([DFL, DFR, DBR, DBL]),
-        //     B => Corners::cycle_drfb([UBR, UBL, DBL, DBR]),
-        //     L => Corners::cycle_drlr([UFL, DFL, DBL, UBL]),
-        // };
-        // let mut ret = self;
-        // for _ in 0..n {
-        //     ret = ret.compose(c);
-        // }
-        // ret
-        // use Move::*;
-        // let c = match m {
-        //     U => Edges::from_magic(0x4801024b0405060743090a400c0d0e0f),
-        //     U2 => Edges::from_magic(0x03010200040506070b090a080c0d0e0f),
-        //     U3 => Edges::from_magic(0x4b0102480405060740090a430c0d0e0f),
-        //     D => Edges::from_magic(0x004a4903040506070841420b0c0d0e0f),
-        //     D2 => Edges::from_magic(0x0002010304050607080a090b0c0d0e0f),
-        //     D3 => Edges::from_magic(0x00494a03040506070842410b0c0d0e0f),
-        //     F => Edges::from_magic(0x171402031005061108090a0b0c0d0e0f),
-        //     F2 => Edges::from_magic(0x010002030705060408090a0b0c0d0e0f),
-        //     F3 => Edges::from_magic(0x141702031105061008090a0b0c0d0e0f),
-        //     B => Edges::from_magic(0x000116150412130708090a0b0c0d0e0f),
-        //     B2 => Edges::from_magic(0x000103020406050708090a0b0c0d0e0f),
-        //     B3 => Edges::from_magic(0x000115160413120708090a0b0c0d0e0f),
-        //     R => Edges::from_magic(0x000102032928060724250a0b0c0d0e0f),
-        //     R2 => Edges::from_magic(0x000102030504060709080a0b0c0d0e0f),
-        //     R3 => Edges::from_magic(0x000102032829060725240a0b0c0d0e0f),
-        //     L => Edges::from_magic(0x0001020304052a2b080927260c0d0e0f),
-        //     L2 => Edges::from_magic(0x000102030405070608090b0a0c0d0e0f),
-        //     L3 => Edges::from_magic(0x0001020304052b2a080926270c0d0e0f),
-        // };
-        // self.compose(c)
-        // todo!()
+        self.compose(Self::mov(m))
     }
 
-    pub fn apply_alg(&self, a: &Alg) -> Self {
-        a.iter().fold(*self, |acc, m| {
-            acc.apply_move(*m)
-        })
-    }
-}
-
-// CO methods
-impl Corners {
-    /// For the given slot, set CO relative to `axis`.
-    pub fn set_co(self, slot: Corner, co: CO, axis: Axis) -> Self {
-        match axis {
-            Axis::UD => self.set_coud(slot, co),
-            Axis::FB => self.set_cofb(slot, co),
-            Axis::LR => self.set_colr(slot, co),
-        }
+    pub fn apply_alg(self, a: &Alg) -> Self {
+        a.iter().fold(self, |acc, m| acc.apply_move(m))
     }
 
-    /// For the given slot, set CO relative to the UD axis.
-    pub fn set_coud(self, slot: Corner, co: CO) -> Self {
-        let ret = ops::lane_set_coud(self.0, slot as usize, co as u8);
-        Self(ret)
+    pub fn is_drud(self) -> bool {
+        self.is_eofb() && self.is_eolr()
     }
 
-    /// For the given slot, set CO relative to the FB axis.
-    pub fn set_cofb(self, slot: Corner, co: CO) -> Self {
-        let ret = ops::lane_set_cofb(self.0, slot as usize, co as u8);
-        Self(ret)
-    }
-
-    /// For the given slot, set CO relative to the LR axis.
-    pub fn set_colr(self, slot: Corner, co: CO) -> Self {
-        let ret = ops::lane_set_colr(self.0, slot as usize, co as u8);
-        Self(ret)
-    }
-
-    /// Get CO relative to the `axis` at the given slot.
-    pub fn co(self, slot: Corner, axis: Axis) -> CO {
-        match axis {
-            Axis::UD => self.coud(slot),
-            Axis::FB => self.cofb(slot),
-            Axis::LR => self.colr(slot),
-        }
-    }
-
-    /// Get CO relative to the UD axis at the given slot.
-    pub fn coud(self, slot: Corner) -> CO {
-        let ret = ops::lane_coud(self.0, slot as usize);
-        CO::from(ret)
-    }
-
-    /// Get CO relative to the FB axis at the given slot.
-    pub fn cofb(self, slot: Corner) -> CO {
-        let ret = ops::lane_cofb(self.0, slot as usize);
-        CO::from(ret)
+    pub fn is_eofb(self) -> bool {
+        ops::eofb(self.0) == u8x16::splat(0)
     }
     
-    /// Get CO relative to the LR axis at the given slot.
-    pub fn colr(self, slot: Corner) -> CO {
-        let ret = ops::lane_colr(self.0, slot as usize);
-        CO::from(ret)
+    pub fn is_eolr(self) -> bool {
+        ops::eolr(self.0) == u8x16::splat(0)
     }
-
-    pub fn check(self) -> Result<(), String> {
-        todo!()
-    }
-
-    /// Checks that CP is bijective.
-    pub fn check_cp(self) -> Result<(), String> {
-        let mut loc = [None; 8];
-        for slot in Corner::all() {
-            let c = self.at(slot).piece();
-            if let Some(prev_slot) = loc[c as usize] {
-                return Err(format!("Corner {} appears twice: first at {}, and at {}", c, prev_slot, slot));
-            }
-            loc[c as usize] = Some(slot);
-        }
-        Ok(())
-    }
-
-    pub fn check_co(self) -> Result<(), String> {
-        todo!()
-    }
-
-    pub fn is_legal(self) -> bool {
-        todo!()
-    }
-
-    pub fn is_even_parity(self) -> bool {
-        todo!()
-    }
-
-    pub fn is_odd_parity(self) -> bool {
-        todo!()
-    }
-
-    pub fn arm(self) -> usize {
-        todo!()
-    }
-
-    pub fn drm(self) -> usize {
-        todo!()
+    
+    pub fn is_eoud(self) -> bool {
+        ops::eoud(self.0) == u8x16::splat(0)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use std::fmt::Debug;
 
     #[test]
-    fn test_set_co() {
-        let c = Corners::new();
-        let s = format!("{:?}", c);
+    fn test_set_eo() {
+        let alg =
+            Alg::try_from("R' U' F R' B2 R L' B R L F B' L2 U' F2 U' D2 F2 U' R2 L2 B R' U' F")
+                .unwrap();
+        let e = Edges::new().apply_alg(&alg);
+        let s = format!("{:?}", e);
         expect!(
             &s,
             "
-            slot:   UBL UBR UFR UFL DFL DFR DBR DBL  a
-            corner: UBL UBR UFR UFL DFL DFR DBR DBL 
-            coud:   0   0   0   0   0   0   0   0 
-        ",
+            slot: UR DR DL UL UF DF DB UB FR BR BL FL
+           piece: UL DR DF FL UR DB UB DL BR UF BL FR
+            eofb:  X  .  .  X  X  .  X  X  .  X  .  .
+            eolr:  X  .  .  .  X  .  X  X  .  .  .  .
+            eoud:  X  .  X  X  .  .  X  .  .  .  .  .
+        "
         );
     }
-
-    #[test]
-    fn test_cofb_colr() {
-        let c = Corners::new().apply_alg(&Alg::try_from("R U F R2 U F'").unwrap());
-        let s = format!("{:?}", c);
-        expect!(
-            &s,
-            "
-            slot:   UBL UBR UFR UFL DFL DFR DBR DBL
-            corner: DFL UFL UBL UFR UBR DBR DFR DBL
-            coud:   1   0   2   1   0   2   0   0
-        ",
-        );
-        let s = format!("{:?}", Corner::all().map(|slot| c.cofb(slot)));
-        expect!(&s, "[CCW, Solved, CW, Solved, CCW, CCW, CCW, Solved]");
-        let s = format!("{:?}", Corner::all().map(|slot| c.colr(slot)));
-        expect!(&s, "[CCW, Solved, CW, CW, CW, Solved, CW, Solved]");
-    }
-
-    fn foo() {
-        let c = Corners::new().apply_move(Move::B);
-        println!("{:?}", c.at(Corner::UBL).cofb())
-    }
-
-    // fn dbg() {
-    //     use crate::Move;
-    //     use super::Corners;
-    //     use crate::Alg;
-    //     let alg = Alg::try_from("R F").unwrap();
-    //     let c = Corners::default() + alg;
-    //     c.dbg();
-    //     (c + c.inverse()).dbg();
-    // }
 }
-
-// A: EP EO
-// A^-1: EO^-1 EP^-1

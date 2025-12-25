@@ -1,9 +1,12 @@
 use std::fmt::Display;
+use std::ops::Add;
 
 use crate::*;
 
+#[repr(u8)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Move {
+    // Face turns
     U,
     U2,
     U3,
@@ -78,12 +81,63 @@ impl TryFrom<&str> for Move {
     }
 }
 
+impl From<u8> for Move {
+    fn from(value: u8) -> Self {  
+        Self::from_u8(value)
+    }
+}
+
+impl From<Move> for u8 {
+    fn from(value: Move) -> Self {
+       value as u8 
+    }
+}
+
+impl Add<Self> for Move {
+    type Output = Option<Self>;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let (m1, n1) = self.decompose();
+        let (m2, n2) = rhs.decompose();
+        if m1 != m2 {
+            return None;
+        } 
+        let n = (n1 + n2) % 4;
+        match (m1, n) {
+            (Face::F, 1) => Some(Move::F),
+            (Face::F, 2) => Some(Move::F2),
+            (Face::F, 3) => Some(Move::F3),
+            (Face::B, 1) => Some(Move::B),
+            (Face::B, 2) => Some(Move::B2),
+            (Face::B, 3) => Some(Move::B3),
+            (Face::L, 1) => Some(Move::L),
+            (Face::L, 2) => Some(Move::L2),
+            (Face::L, 3) => Some(Move::L3),
+            (Face::R, 1) => Some(Move::R),
+            (Face::R, 2) => Some(Move::R2),
+            (Face::R, 3) => Some(Move::R3),
+            (Face::U, 1) => Some(Move::U),
+            (Face::U, 2) => Some(Move::U2),
+            (Face::U, 3) => Some(Move::U3),
+            (Face::D, 1) => Some(Move::D),
+            (Face::D, 2) => Some(Move::D2),
+            (Face::D, 3) => Some(Move::D3),
+            (_, _) => None,
+        }
+    }
+}
+
 impl Move {
-    pub fn all() -> &'static [Move] {
+    pub const fn all() -> [Move; 18] {
         use Move::*;
-        &[
+        [
             U, U2, U3, D, D2, D3, F, F2, F3, B, B2, B3, R, R2, R3, L, L2, L3,
         ]
+    }
+    
+    pub const fn from_u8(x: u8) -> Self {
+        debug_assert!(x < 18);
+        unsafe { std::mem::transmute::<u8, Move>(x) }
     }
 
     pub fn drud_moveset() -> &'static [Move] {
@@ -104,9 +158,14 @@ impl Move {
         }
     }
 
+    /// The axis perpendicular to the face that this move turns.
+    pub fn axis(self) -> Axis {
+        self.face().axis()
+    }
+
     /// The face that the move turns, and the number of clockwise turns needed on that face
     /// to achieve the move.
-    pub fn decompose(&self) -> (Face, i32) {
+    pub fn decompose(self) -> (Face, i32) {
         use Move::*;
         let n = match self {
             U | D | F | B | R | L => 1,
@@ -116,30 +175,58 @@ impl Move {
         (self.face(), n)
     }
 
-    pub fn is_half_turn(&self) -> bool {
+    pub fn direction(self) -> Direction {
+        use Move::*;
+        match self {
+            U | D | F | B | R | L => Direction::Clockwise,
+            U2 | D2 | F2 | B2 | R2 | L2 => Direction::Double,
+            U3 | D3 | F3 | B3 | R3 | L3 => Direction::Counterclockwise,
+        }
+    }
+
+    pub fn is_half_turn(self) -> bool {
         use Move::*;
         matches!(self, U2 | D2 | F2 | B2 | R2 | L2)
     }
 
-    pub fn is_clockwise_turn(&self) -> bool {
+    pub fn is_clockwise(self) -> bool {
         use Move::*;
         matches!(self, U | D | F | B | R | L)
     }
 
-    pub fn is_counterclockwise_turn(&self) -> bool {
+    pub fn is_counterclockwise_turn(self) -> bool {
         use Move::*;
         matches!(self, U3 | D3 | F3 | B3 | R3 | L3)
     }
 
-    pub fn is_quarter_turn(&self) -> bool {
-        self.is_clockwise_turn() || self.is_counterclockwise_turn()
+    pub fn is_quarter_turn(self) -> bool {
+        self.is_clockwise() || self.is_counterclockwise_turn()
     }
 
-    pub fn cancels_with(&self, other: &Self) -> bool {
+    pub fn cancels_with(self, other: Self) -> bool {
         self.face() == other.face()
     }
 
-    pub fn commutes_with(&self, other: &Self) -> bool {
+    pub fn commutes_with(self, other: Self) -> bool {
         self.face() == other.face() || self.face() == other.face().opposite()
+    }
+
+    pub fn canonically_succeeds(self, prev: Self) -> bool {
+        !self.commutes_with(prev) || (!self.cancels_with(prev) && self > prev)
+    }
+
+    pub fn canonically_precedes(self, next: Self) -> bool {
+        next.canonically_succeeds(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+    #[test]
+    fn test_canonical() {
+        use Move::*;
+        assert_eq!(D.canonically_succeeds(U), true);
+        assert_eq!(U.canonically_succeeds(D), false);
     }
 }

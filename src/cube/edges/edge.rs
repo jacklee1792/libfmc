@@ -12,20 +12,20 @@ use crate::*;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Edge {
     // S slice
-    UR = 0,
-    DR = 1,
-    DL = 2,
-    UL = 3,
+    UR = 0, // 0000
+    DR = 1, // 0001
+    DL = 2, // 0010
+    UL = 3, // 0011
     // M slice
-    UF = 4,
-    DF = 5,
-    DB = 6,
-    UB = 7,
+    UF = 4, // 0100
+    DF = 5, // 0101
+    DB = 6, // 0110
+    UB = 7, // 0111
     // E slice
-    FR = 8,
-    BR = 9,
-    BL = 10,
-    FL = 11,
+    FR = 8, // 1000
+    BR = 9, // 1001
+    BL = 10, // 1010
+    FL = 11, // 1011
 }
 
 impl From<u8> for Edge {
@@ -34,8 +34,14 @@ impl From<u8> for Edge {
     }
 }
 
-impl From<u8> for Edge {
-    fn from(x: u8) -> Self {
+impl From<Edge> for u8 {
+    fn from(x: Edge) -> Self {
+        x as u8 
+    }
+}
+
+impl Edge {
+    const fn from_u8(x: u8) -> Self {
         debug_assert!(x < 12);
         unsafe { std::mem::transmute::<u8, Edge>(x) }
     }
@@ -97,7 +103,19 @@ impl Edge {
     }
 
     pub const fn all() -> [Edge; 12] {
-        use Edge::*;
-        [UF, UL, UB, UR, DF, DL, DB, DR, FR, FL, BL, BR]
+        [
+            Edge::from_u8(0),
+            Edge::from_u8(1),
+            Edge::from_u8(2),
+            Edge::from_u8(3),
+            Edge::from_u8(4),
+            Edge::from_u8(5),
+            Edge::from_u8(6),
+            Edge::from_u8(7),
+            Edge::from_u8(8),
+            Edge::from_u8(9),
+            Edge::from_u8(10),
+            Edge::from_u8(11),
+        ]
     }
 }

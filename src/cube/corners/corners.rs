@@ -111,6 +111,10 @@ impl Corners {
     pub const fn from_magic(m: u64) -> Self {
         Self(u8x8::from_array(m.to_le_bytes()))
     }
+
+    pub const fn magic(self) -> u64 {
+        u64::from_le_bytes(self.0.to_array())
+    }
     
     /// Modify CP by specifying for each location which corner populates it. Preserves CO on UD.
     pub fn set_cp_passive<F>(&self, mut f: F) -> Self
@@ -218,50 +222,37 @@ impl Corners {
     }
 
     pub fn apply_move(self, m: Move) -> Self {
-        use Face::*;
-        use Corner::*;
-        let (f, n) = m.decompose();
-        let c = match f {
-            U => Corners::cycle_drud([UFR, UFL, UBL, UBR]),
-            F => Corners::cycle_drfb([UFR, DFR, DFL, UFL]),
-            R => Corners::cycle_drlr([UFR, UBR, DBR, DFR]),
-            D => Corners::cycle_drud([DFL, DFR, DBR, DBL]),
-            B => Corners::cycle_drfb([UBR, UBL, DBL, DBR]),
-            L => Corners::cycle_drlr([UFL, DFL, DBL, UBL]),
+        use Move::*;
+        let c = match m {
+            U => Corners::from_magic(0x0706050402010003),
+            U2 => Corners::from_magic(0x0706050401000302),
+            U3 => Corners::from_magic(0x0706050400030201),
+            D => Corners::from_magic(0x0605040703020100),
+            D2 => Corners::from_magic(0x0504070603020100),
+            D3 => Corners::from_magic(0x0407060503020100),
+            F => Corners::from_magic(0x07060a150c130100),
+            F2 => Corners::from_magic(0x0706030205040100),
+            F3 => Corners::from_magic(0x07060c130a150100),
+            B => Corners::from_magic(0x0817050403020e11),
+            B2 => Corners::from_magic(0x0100050403020706),
+            B3 => Corners::from_magic(0x0e11050403020817),
+            R => Corners::from_magic(0x07091604030d1200),
+            R2 => Corners::from_magic(0x0702010403060500),
+            R3 => Corners::from_magic(0x070d120403091600),
+            L => Corners::from_magic(0x1406050b1002010f),
+            L2 => Corners::from_magic(0x0306050007020104),
+            L3 => Corners::from_magic(0x1006050f1402010b),
         };
-        let mut ret = self;
-        for _ in 0..n {
-            ret = ret.compose(c);
-        }
-        ret
-        // use Move::*;
-        // let c = match m {
-        //     U => Edges::from_magic(0x4801024b0405060743090a400c0d0e0f),
-        //     U2 => Edges::from_magic(0x03010200040506070b090a080c0d0e0f),
-        //     U3 => Edges::from_magic(0x4b0102480405060740090a430c0d0e0f),
-        //     D => Edges::from_magic(0x004a4903040506070841420b0c0d0e0f),
-        //     D2 => Edges::from_magic(0x0002010304050607080a090b0c0d0e0f),
-        //     D3 => Edges::from_magic(0x00494a03040506070842410b0c0d0e0f),
-        //     F => Edges::from_magic(0x171402031005061108090a0b0c0d0e0f),
-        //     F2 => Edges::from_magic(0x010002030705060408090a0b0c0d0e0f),
-        //     F3 => Edges::from_magic(0x141702031105061008090a0b0c0d0e0f),
-        //     B => Edges::from_magic(0x000116150412130708090a0b0c0d0e0f),
-        //     B2 => Edges::from_magic(0x000103020406050708090a0b0c0d0e0f),
-        //     B3 => Edges::from_magic(0x000115160413120708090a0b0c0d0e0f),
-        //     R => Edges::from_magic(0x000102032928060724250a0b0c0d0e0f),
-        //     R2 => Edges::from_magic(0x000102030504060709080a0b0c0d0e0f),
-        //     R3 => Edges::from_magic(0x000102032829060725240a0b0c0d0e0f),
-        //     L => Edges::from_magic(0x0001020304052a2b080927260c0d0e0f),
-        //     L2 => Edges::from_magic(0x000102030405070608090b0a0c0d0e0f),
-        //     L3 => Edges::from_magic(0x0001020304052b2a080926270c0d0e0f),
-        // };
-        // self.compose(c)
-        // todo!()
+        self.compose(c)
+    }
+
+    pub fn apply_rotation(self, r: Rotation) -> Self {
+        todo!()
     }
 
     pub fn apply_alg(&self, a: &Alg) -> Self {
         a.iter().fold(*self, |acc, m| {
-            acc.apply_move(*m)
+            acc.apply_move(m)
         })
     }
 }
@@ -339,6 +330,10 @@ impl Corners {
         Ok(())
     }
 
+    pub fn is_drud(self) -> bool {
+        ops::coud(self.0) == u8x8::splat(0)
+    }
+
     pub fn check_co(self) -> Result<(), String> {
         todo!()
     }
@@ -376,7 +371,7 @@ mod tests {
         expect!(
             &s,
             "
-            slot:   UBL UBR UFR UFL DFL DFR DBR DBL  a
+            slot:   UBL UBR UFR UFL DFL DFR DBR DBL
             corner: UBL UBR UFR UFL DFL DFR DBR DBL 
             coud:   0   0   0   0   0   0   0   0 
         ",
@@ -399,6 +394,95 @@ mod tests {
         expect!(&s, "[CCW, Solved, CW, Solved, CCW, CCW, CCW, Solved]");
         let s = format!("{:?}", Corner::all().map(|slot| c.colr(slot)));
         expect!(&s, "[CCW, Solved, CW, CW, CW, Solved, CW, Solved]");
+    }
+
+    #[test]
+    fn test_gen_apply_move() {
+        let mut s = String::new();
+        for m in Move::all() {
+            let (f, n) = m.decompose();
+            use Face::*;
+            use Corner::*;
+            let cycle = match f {
+                U => Corners::cycle_drud([UFR, UFL, UBL, UBR]),
+                F => Corners::cycle_drfb([UFR, DFR, DFL, UFL]),
+                R => Corners::cycle_drlr([UFR, UBR, DBR, DFR]),
+                D => Corners::cycle_drud([DFL, DFR, DBR, DBL]),
+                B => Corners::cycle_drfb([UBR, UBL, DBL, DBR]),
+                L => Corners::cycle_drlr([UFL, DFL, DBL, UBL]),
+            };
+            let mut c = Corners::new();
+            for _ in 0..n {
+                c = c.compose(cycle);
+            }
+            s += &format!("{m:?} => Corners::from_magic(0x{:016x}),\n", c.magic());
+        }
+        expect!(
+            &s,
+            "
+            U => Corners::from_magic(0x0706050402010003),
+            U2 => Corners::from_magic(0x0706050401000302),
+            U3 => Corners::from_magic(0x0706050400030201),
+            D => Corners::from_magic(0x0605040703020100),
+            D2 => Corners::from_magic(0x0504070603020100),
+            D3 => Corners::from_magic(0x0407060503020100),
+            F => Corners::from_magic(0x07060a150c130100),
+            F2 => Corners::from_magic(0x0706030205040100),
+            F3 => Corners::from_magic(0x07060c130a150100),
+            B => Corners::from_magic(0x0817050403020e11),
+            B2 => Corners::from_magic(0x0100050403020706),
+            B3 => Corners::from_magic(0x0e11050403020817),
+            R => Corners::from_magic(0x07091604030d1200),
+            R2 => Corners::from_magic(0x0702010403060500),
+            R3 => Corners::from_magic(0x070d120403091600),
+            L => Corners::from_magic(0x1406050b1002010f),
+            L2 => Corners::from_magic(0x0306050007020104),
+            L3 => Corners::from_magic(0x1006050f1402010b),
+        ")
+    }
+
+    fn test_gen_rotate() {
+        let mut s = String::new();
+        for m in Move::all() {
+            let (f, n) = m.decompose();
+            use Face::*;
+            use Corner::*;
+            let cycle = match f {
+                U => Corners::cycle_drud([UFR, UFL, UBL, UBR]),
+                F => Corners::cycle_drfb([UFR, DFR, DFL, UFL]),
+                R => Corners::cycle_drlr([UFR, UBR, DBR, DFR]),
+                D => Corners::cycle_drud([DFL, DFR, DBR, DBL]),
+                B => Corners::cycle_drfb([UBR, UBL, DBL, DBR]),
+                L => Corners::cycle_drlr([UFL, DFL, DBL, UBL]),
+            };
+            let mut c = Corners::new();
+            for _ in 0..n {
+                c = c.compose(cycle);
+            }
+            s += &format!("{m:?} => Corners::from_magic(0x{:016x}),\n", c.magic());
+        }
+        expect!(
+            &s,
+            "
+            U => Corners::from_magic(0x0706050402010003),
+            U2 => Corners::from_magic(0x0706050401000302),
+            U3 => Corners::from_magic(0x0706050400030201),
+            D => Corners::from_magic(0x0605040703020100),
+            D2 => Corners::from_magic(0x0504070603020100),
+            D3 => Corners::from_magic(0x0407060503020100),
+            F => Corners::from_magic(0x07060a150c130100),
+            F2 => Corners::from_magic(0x0706030205040100),
+            F3 => Corners::from_magic(0x07060c130a150100),
+            B => Corners::from_magic(0x0817050403020e11),
+            B2 => Corners::from_magic(0x0100050403020706),
+            B3 => Corners::from_magic(0x0e11050403020817),
+            R => Corners::from_magic(0x07091604030d1200),
+            R2 => Corners::from_magic(0x0702010403060500),
+            R3 => Corners::from_magic(0x070d120403091600),
+            L => Corners::from_magic(0x1406050b1002010f),
+            L2 => Corners::from_magic(0x0306050007020104),
+            L3 => Corners::from_magic(0x1006050f1402010b),
+        ")
     }
 
     fn foo() {
