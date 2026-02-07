@@ -140,9 +140,14 @@ impl Move {
         unsafe { std::mem::transmute::<u8, Move>(x) }
     }
 
-    pub fn drud_moveset() -> &'static [Move] {
+    pub fn drud_moveset() -> [Move; 10] {
         use Move::*;
-        &[U, U2, U3, D, D2, D3, F2, B2, R2, L2]
+        [U, U2, U3, D, D2, D3, F2, B2, R2, L2]
+    }
+
+    pub fn htr_moveset() -> [Move; 6] {
+        use Move::*;
+        [U2, D2, F2, B2, R2, L2]
     }
 
     /// The face that this move turns.

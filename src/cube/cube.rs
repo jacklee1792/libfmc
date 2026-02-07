@@ -1,7 +1,7 @@
 use super::*;
 use std::ops::Add;
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, PartialEq, Eq)]
 pub struct Cube {
     pub edges: Edges,
     pub corners: Corners,
@@ -91,6 +91,14 @@ impl Cube {
             edges: self.edges.inverse(),
             corners: self.corners.inverse(),
         }
+    }
+}
+
+use std::fmt::Debug;
+
+impl Debug for Cube {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Edges\n{:?}\nCorners\n{:?}", self.edges, self.corners) 
     }
 }
 

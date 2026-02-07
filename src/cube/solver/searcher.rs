@@ -1,11 +1,38 @@
+use crate::Alg;
 use crate::Cube;
 use crate::Move;
 use crate::Set32;
-use crate::Alg;
 
 struct Frame {
     moves: Set32<Move>,
     cube: Cube,
+}
+
+pub struct SearcherMoves<'a> {
+    stack: &'a Vec<Frame>,
+}
+
+impl<'a> SearcherMoves<'a> {
+    pub fn len(&self) -> usize {
+        self.stack.len() - 1
+    }
+
+    pub fn get(&self, index: usize) -> Option<Move> {
+        let frame = self.stack.get(index + 1)?;
+        Some(frame.moves.first().unwrap())
+    }
+
+    pub fn index(&self, index: usize) -> Move {
+        self.stack[index + 1].moves.first().unwrap()
+    }
+
+    pub fn alg(&self) -> Alg {
+        self.stack
+            .iter()
+            .skip(1)
+            .map(|x| x.moves.first().unwrap())
+            .collect::<Alg>()
+    }
 }
 
 pub struct Searcher {
@@ -40,32 +67,8 @@ impl Searcher {
         }
     }
 
-    pub fn moves(&self) -> Alg {
-        self.stack
-            .iter()
-            .skip(1)
-            .map(|x| x.moves.first().unwrap())
-            .collect::<Alg>()
-    }
-
-    pub fn nth(&self, n: usize) -> Option<Move> {
-        if n >= self.len() {
-            None
-        } else {
-            Some(self.stack[n + 1].moves.first().unwrap())
-        }
-    }
-
-    pub fn nth_last(&self, n: usize) -> Option<Move> {
-        if n >= self.len() {
-            None
-        } else {
-            Some(self.stack[self.len() - n].moves.first().unwrap())
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.stack.len() - 1
+    pub fn moves(&self) -> SearcherMoves<'_> {
+        SearcherMoves { stack: &self.stack }
     }
 
     pub fn prune(&mut self) {
@@ -105,9 +108,7 @@ impl Iterator for Searcher {
         self.pruned = false;
         loop {
             let (prev, top) = match self.stack.as_mut_slice() {
-                [.., prev, top] => {
-                    (prev, top)
-                }
+                [.., prev, top] => (prev, top),
                 _ => {
                     return None;
                 }
@@ -126,19 +127,78 @@ impl Iterator for Searcher {
     }
 }
 
+/// Thin wrapper around `Searcher` that yields results in order of length.
+#[derive(Default)]
+pub struct IDASearcher {
+    n: usize,
+    searcher: Searcher, 
+}
+
+impl IDASearcher {
+    pub fn new(start: Cube, moveset: impl IntoIterator<Item = Move>) -> Self {
+        Self {
+            n: 0,
+            searcher: Searcher::new(start, moveset)
+        }
+    }
+
+    pub fn moves(&self) -> SearcherMoves<'_> {
+        self.searcher.moves()
+    }
+
+    pub fn prune(&mut self) {
+        self.searcher.pruned = true;
+    }
+
+    pub fn is_frontier(&self) -> bool {
+        self.searcher.moves().len() == self.n
+    }
+}
+
+impl Iterator for IDASearcher {
+    type Item = Cube;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(c) = self.searcher.next() {
+            if self.searcher.moves().len() == self.n {
+                self.searcher.prune()
+            }
+            Some(c)
+        } else {
+            self.n += 1;
+            self.searcher = Searcher::default();
+            self.searcher.next()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
+
+    #[test]
+    pub fn test_foobar() {
+        let mut s = IDASearcher::default();
+        while let Some(_c) = s.next() {
+            if !s.is_frontier() {
+                continue;
+            }
+            if s.moves().len() >= 3 {
+                break;
+            }
+            println!("{}", s.moves().alg());
+        } 
+    }
 
     #[test]
     pub fn test_canonical_distribution() {
         let mut s = Searcher::default();
         let mut dist = [0; 6];
         while s.next().is_some() {
-            if s.len() == 5 {
+            if s.moves().len() == 5 {
                 s.prune();
             }
-            dist[s.len()] += 1;
+            dist[s.moves().len()] += 1;
         }
         // https://tomas.rokicki.com/rubik20.pdf
         assert_eq!(dist, [1, 18, 243, 3240, 43254, 577368]);
@@ -146,29 +206,35 @@ mod tests {
 
     #[test]
     pub fn test_find_eofb() {
-        let c = Cube::default().apply_alg(Alg::try_from("R' U' F R F' R' B' L' D' B2 L' D B2 R' B2 D2 B2 L' F2 L U2 D2 R' U' F").unwrap());
+        let c = Cube::default().apply_alg(
+            Alg::try_from("R' U' F R F' R' B' L' D' B2 L' D B2 R' B2 D2 B2 L' F2 L U2 D2 R' U' F")
+                .unwrap(),
+        );
         let mut s = Searcher::new(c, Move::all());
         let mut count = 0;
         while let Some(c) = s.next() {
-            if s.len() == 7 || c.is_eofb() {
+            let n = s.moves().len();
+            if n == 7 || c.is_eofb() {
                 s.prune();
             }
             let is_canonical = (|| {
-                let m = match s.nth_last(0) {
-                    None => return true,
-                    Some(m) => m
+                let m = if n < 1 {
+                    return true;
+                } else {
+                    s.moves().index(n - 1)
                 };
                 if !m.is_clockwise() {
                     return false;
                 }
-                let m2 = match s.nth_last(1) {
-                    None => return true,
-                    Some(m2) => m2
+                let m2 = if n < 2 {
+                    return true;
+                } else {
+                    s.moves().index(n - 2)
                 };
                 !m2.commutes_with(m) || m2.is_clockwise()
             })();
             if c.is_eofb() && is_canonical {
-                println!("{}", s.moves());
+                println!("{}", s.moves().alg());
                 count += 1;
             }
         }
@@ -177,7 +243,10 @@ mod tests {
 
     #[test]
     pub fn test_foo() {
-        let c = Cube::default().apply_alg(Alg::try_from("R' U' F R F' R' B' L' D' B2 L' D B2 R' B2 D2 B2 L' F2 L U2 D2 R' U' F").unwrap());
+        let c = Cube::default().apply_alg(
+            Alg::try_from("R' U' F R F' R' B' L' D' B2 L' D B2 R' B2 D2 B2 L' F2 L U2 D2 R' U' F")
+                .unwrap(),
+        );
 
         use Move::*;
         let c2 = c.apply_alg("R U L F B".try_into().unwrap());

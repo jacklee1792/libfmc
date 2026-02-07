@@ -1,6 +1,8 @@
 use std::simd::u8x8;
 use std::simd::mask8x8;
+use std::simd::usizex8;
 use std::simd::cmp::{SimdOrd, SimdPartialEq};
+use std::simd::num::SimdUint;
 
 // Suppose a corner `c` is currently at a slot `s`. If `c` belongs to the same HTR tetrad as `s`,
 // then CO on all axes is the same at `s`. Otherwise, CO on FB and LR can be deduced from CO on
@@ -167,5 +169,71 @@ pub fn lane_set_colr(a: u8x8, i: usize, colr: u8) -> u8x8 {
 
 /// select corners which have ud sticker facing fb
 pub fn armlr(a: u8x8) -> mask8x8 {
+    todo!()
+}
 
+/// Given a CO vector, keep 0s and swap 1s with 2s (and vice versa).
+pub fn invert_nonzero(co: u8x8) -> u8x8 {
+    let zero = u8x8::splat(0);
+    let three = u8x8::splat(3);
+    co.simd_eq(zero).select(zero, three - co)
+}
+
+/// Given a vector A, return a new vector B where B[i] encodes the number of
+/// inversions in A that have left endpoint at i, i.e. the count of A[i] > A[j] for i < j
+pub fn lehmer(a: u8x8) -> u8x8 {
+    let mut unused = 0xffff;
+    let mut ret = u8x8::splat(0);
+    for i in 0..8 {
+        let j = 1u16.wrapping_shl(a[i] as u32);
+        ret[i] = (unused & (j - 1)).count_ones() as u8;
+        unused ^= j;
+    }
+    ret
+}
+
+/// Inverse operation of `lehmer`. Behaviour is undefined if the inversion counts
+/// do not correspond to a real permutation.
+pub fn unlehmer(a: u8x8) -> u8x8 {
+    let mut unused: usize = 0x876543210;
+    let mut ret = u8x8::splat(0);
+    for i in 0..8 {
+        let invs = a[i];
+        let above = unused >> (4 * (invs + 1));
+        let below = unused & (1 << (4 * invs)) - 1;
+        ret[i] = ((unused >> (4 * invs)) & 0xf) as u8;
+        unused = above << (4 * invs) | below;
+    }
+    ret
+}
+
+/// Rank of a permutation. (it's just a prank bro!!!)
+pub fn prank(a: u8x8) -> usize {
+    let fact = usizex8::from_array([5040, 720, 120, 24, 6, 2, 1, 1]);
+    (fact * lehmer(a).cast()).reduce_sum()
+}
+
+/// Inverse of `prank`. Behaviour is undefined if the rank is too big to correspond
+/// to a permutation.
+pub fn unprank(mut rank: usize) -> u8x8 {
+    let fact = usizex8::from_array([5040, 720, 120, 24, 6, 2, 1, 1]);
+    let mut l = u8x8::splat(0);
+    for i in 0..8 {
+        l[i] = (rank / fact[i]) as u8;
+        rank %= fact[i]; 
+    }
+    unlehmer(l)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_prank_roundtrip() {
+        for rank in 0..40320 {
+            let p = unprank(rank);
+            assert_eq!(rank, prank(p));
+        }
+    }
 }

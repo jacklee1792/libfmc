@@ -23,7 +23,7 @@ use std::simd::mask8x16;
 ///   - 0 means the edge is oriented;
 ///   - 1 means the edge is misoriented.
 #[repr(transparent)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Edges(pub(super) u8x16);
 
 impl Debug for Edges {

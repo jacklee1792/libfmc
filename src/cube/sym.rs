@@ -1,10 +1,36 @@
 use crate::*;
+use crate::cube::corners;
+use std::ops::Add;
+use std::sync::LazyLock;
+use std::array;
+
+/// Cayley table for the group of 48 cube symmetries
+static SYM_ADD_TABLE: LazyLock<[[Sym; 48]; 48]> = LazyLock::new(|| {
+    let syms: [Cube; 48] = array::from_fn(|i| {
+        Sym::from_u8(i as u8).apply_to(Cube::new())
+    });
+    let table: [[Sym; 48]; 48] = array::from_fn(|i| {
+        let a = syms[i];
+        array::from_fn(|j| {
+            let ab = Sym::from_u8(j as u8).apply_to(a);
+            let mut res: Option<Sym> = None;
+            for k in 0..48 {
+                if ab == syms[k] {
+                    res = Some(Sym::from_u8(k as u8));
+                    break;
+                }
+            }
+            res.unwrap()
+        })
+    });
+    table
+});
 
 // copies the edge enum and adds mirrors
 // a sym XY means we move sticker XY to UF
 // XYm means do XY, and then mirror across M slice
 #[repr(u8)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Sym {
     UR = 0,
     DR = 1,
@@ -56,7 +82,80 @@ pub enum Sym {
     LFm = 47,
 }
 
+impl Add<Self> for Sym {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        SYM_ADD_TABLE[self as usize][rhs as usize]
+    }
+}
+
 impl Sym {
+    /// Whether the symmetry is a pure rotation (i.e. it doesn't involve
+    /// a mirroring operation). 
+    pub const fn is_rotation(self) -> bool {
+        (self as u8) < 24
+    }
+
+    pub const fn from_u8(x: u8) -> Self {
+        debug_assert!(x < 48);
+        unsafe { std::mem::transmute::<u8, Sym>(x) }
+    }
+
+    pub const fn all() -> [Sym; 48] {
+        use Sym::*;
+        [
+            DR,
+            UR,
+            DL,
+            UL,
+            UF,
+            DF,
+            DB,
+            UB,
+            FR,
+            BR,
+            BL,
+            FL,
+            RU,
+            RD,
+            LD,
+            LU,
+            FU,
+            FD,
+            BD,
+            BU,
+            RF,
+            RB,
+            LB,
+            LF,
+            URm,
+            DRm,
+            DLm,
+            ULm,
+            UFm,
+            DFm,
+            DBm,
+            UBm,
+            FRm,
+            BRm,
+            BLm,
+            FLm,
+            RUm,
+            RDm,
+            LDm,
+            LUm,
+            FUm,
+            FDm,
+            BDm,
+            BUm,
+            RFm,
+            RBm,
+            LBm,
+            LFm,
+        ]
+    }
+
     pub const fn inverse(self) -> Self {
         use Sym::*;
         match self {
@@ -111,6 +210,17 @@ impl Sym {
         }
     }
 
+    pub fn apply_to(self, c: Cube) -> Cube {
+        // Mirroring transformations can't be represented as a cube op, sad
+        let mut ret = c + self.cube();
+        if !self.is_rotation() {
+            // make into method on corners ??
+            let coud = corners::ops::invert_nonzero(corners::ops::coud(ret.corners.0));
+            ret.corners.0 = corners::ops::set_coud(ret.corners.0, coud);
+        }
+        ret
+    }
+
     pub fn cube(self) -> Cube {
         use Sym::*;
         use Move::*;
@@ -129,7 +239,10 @@ impl Sym {
                 Edges::cycle_eofb([Edge::BL, Edge::BR])
             ),
             corners: (
-                Corners::cycle_drud([Corner::UFL, Corner::UFR])
+                Corners::cycle_drud([Corner::UFL, Corner::UFR]) +
+                Corners::cycle_drud([Corner::UBL, Corner::UBR]) +
+                Corners::cycle_drud([Corner::DFL, Corner::DFR]) +
+                Corners::cycle_drud([Corner::DBL, Corner::DBR])
             )
         };
         
@@ -158,30 +271,63 @@ impl Sym {
             BD => UB.cube() + FD.cube(),
             RB => UB.cube() + LF.cube(),
             LB => UB.cube() + RF.cube(),
-            URm => panic!(),
-            DRm => panic!(),
-            DLm => panic!(),
-            ULm => panic!(),
-            UFm => panic!(),
-            DFm => panic!(),
-            DBm => panic!(),
-            UBm => panic!(),
-            FRm => panic!(),
-            BRm => panic!(),
-            BLm => panic!(),
-            FLm => panic!(),
-            RUm => panic!(),
-            RDm => panic!(),
-            LDm => panic!(),
-            LUm => panic!(),
-            FUm => panic!(),
-            FDm => panic!(),
-            BDm => panic!(),
-            BUm => panic!(),
-            RFm => panic!(),
-            RBm => panic!(),
-            LBm => panic!(),
-            LFm => panic!(),
+            URm => UR.cube() + lr,
+            DRm => DR.cube() + lr,
+            DLm => DL.cube() + lr,
+            ULm => UL.cube() + lr,
+            UFm => UF.cube() + lr,
+            DFm => DF.cube() + lr,
+            DBm => DB.cube() + lr,
+            UBm => UB.cube() + lr,
+            FRm => FR.cube() + lr,
+            BRm => BR.cube() + lr,
+            BLm => BL.cube() + lr,
+            FLm => FL.cube() + lr,
+            RUm => RU.cube() + lr,
+            RDm => RD.cube() + lr,
+            LDm => LD.cube() + lr,
+            LUm => LU.cube() + lr,
+            FUm => FU.cube() + lr,
+            FDm => FD.cube() + lr,
+            BDm => BD.cube() + lr,
+            BUm => BU.cube() + lr,
+            RFm => RF.cube() + lr,
+            RBm => RB.cube() + lr,
+            LBm => LB.cube() + lr,
+            LFm => LF.cube() + lr,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn test_sym_add() {
+        assert_eq!(Sym::UF, Sym::DR + Sym::DR);
+        assert_eq!(Sym::UF, Sym::BR + Sym::UL + Sym::FD);
+        assert_eq!(Sym::UF, Sym::BL + Sym::RF + Sym::DF + Sym::DL);
+        assert_eq!(Sym::UR + Sym::FRm, Sym::RBm);
+    }
+
+    #[test]
+    pub fn test_syms_unique() {
+        for i in 0..48 {
+            let a = Sym::from_u8(i);
+            for j in (i+1)..48 {
+                let b = Sym::from_u8(j);
+                assert_ne!(a.cube(), b.cube());
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_cayley_table_rows_bijective() {
+        use std::collections::HashSet;
+        for i in 0..48 {
+            let s: HashSet<Sym> = HashSet::from_iter(SYM_ADD_TABLE[i]);
+            assert_eq!(s.len(), 48);
         }
     }
 }

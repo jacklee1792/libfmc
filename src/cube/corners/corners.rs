@@ -23,8 +23,8 @@ use super::ops;
 ///   - 1 means the corner is twisted counterclockwise;
 ///   - 2 means the corner is twisted clockwise.
 #[repr(transparent)]
-#[derive(Copy, Clone)]
-pub struct Corners(pub(super) u8x8);
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct Corners(pub u8x8);
 
 impl Debug for Corners {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -356,6 +356,10 @@ impl Corners {
 
     pub fn drm(self) -> usize {
         todo!()
+    }
+
+    pub fn perm_coord(self) -> usize {
+        ops::prank(ops::cp(self.0))
     }
 }
 
