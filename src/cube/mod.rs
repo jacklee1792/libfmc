@@ -13,6 +13,7 @@ mod sym;
 mod centers;
 mod spy;
 mod direction;
+mod coord;
 
 pub use alg::*;
 pub use corners::*;
@@ -30,6 +31,7 @@ pub use sym::*;
 pub use centers::*;
 pub use spy::*;
 pub use direction::*;
+pub use coord::*;
 
 mod expect;
 pub(crate) use expect::*;

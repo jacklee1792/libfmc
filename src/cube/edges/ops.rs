@@ -1,6 +1,8 @@
-use std::simd::u8x16;
+use std::ops::{BitAnd, Shr};
+use std::simd::{u8x16, usizex16};
 use std::simd::mask8x16;
 use std::simd::cmp::{SimdOrd, SimdPartialEq};
+use std::simd::num::SimdUint;
 
 use crate::CORNERS_IDENT;
 
@@ -226,4 +228,36 @@ pub fn flip(edges: mask8x16) -> u8x16 {
         u8x16::splat(0),
     )
 }
-    
+
+// eofb coordinate of the first 11 edges
+pub fn index_eofb(a: u8x16) -> usize {
+    const MULT: usizex16 = usizex16::from_array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 0, 0, 0, 0, 0]);
+    (eofb(a).cast() * MULT).reduce_sum()
+}
+
+pub fn unindex_eofb(coord: usize) -> u8x16 {
+    debug_assert!(coord < 2048);
+    // infer parity bit
+    let coord = coord + (2048 * (coord.count_ones() & 1)) as usize;
+    const MULT: usizex16 = usizex16::from_array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 0, 0, 0, 0]);
+    const SH: usizex16 = usizex16::from_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 64, 64, 64, 64]);
+    let eofb = usizex16::splat(coord).bitand(MULT).shr(SH);
+    set_eofb(EDGES_IDENT, eofb.cast())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    pub fn test_eofb_roundtrip() {
+        let mut cases = HashSet::<u8x16>::new();
+        for coord in 0..2048 {
+            let case = unindex_eofb(coord);
+            assert_eq!(coord, index_eofb(case));
+            cases.insert(case);
+        }
+        assert_eq!(cases.len(), 2048);
+    }
+}

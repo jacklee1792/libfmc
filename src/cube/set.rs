@@ -2,15 +2,15 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 
 #[derive(Copy)]
-pub struct Set32<T> {
-    bits: u32,
+pub struct Set64<T> {
+    bits: u64,
     _marker: PhantomData<T>,
 }
 
 #[derive(Default)]
-pub struct Set32Iter<T>(Set32<T>);
+pub struct Set64Iter<T>(Set64<T>);
 
-impl<T> FromIterator<T> for Set32<T> where T: From<u8> + Into<u8> {
+impl<T> FromIterator<T> for Set64<T> where T: From<u8> + Into<u8> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         let mut ret = Self::default();
         for x in iter {
@@ -20,7 +20,7 @@ impl<T> FromIterator<T> for Set32<T> where T: From<u8> + Into<u8> {
     }
 }
 
-impl<T> Iterator for Set32Iter<T> where T: From<u8> + Into<u8> {
+impl<T> Iterator for Set64Iter<T> where T: From<u8> + Into<u8> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -32,17 +32,17 @@ impl<T> Iterator for Set32Iter<T> where T: From<u8> + Into<u8> {
     }
 }
 
-impl<T> IntoIterator for Set32<T> where T: From<u8> + Into<u8>
+impl<T> IntoIterator for Set64<T> where T: From<u8> + Into<u8>
 {
     type Item = T;
-    type IntoIter = Set32Iter<T>;
+    type IntoIter = Set64Iter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        Set32Iter(self) 
+        Set64Iter(self) 
     }
 }
 
-impl<T> Clone for Set32<T> {
+impl<T> Clone for Set64<T> {
     fn clone(&self) -> Self {
         Self {
             bits: self.bits,
@@ -51,7 +51,7 @@ impl<T> Clone for Set32<T> {
     }
 }
 
-impl<T> Debug for Set32<T>
+impl<T> Debug for Set64<T>
 where
     T: Debug + From<u8> + Into<u8>,
 {
@@ -61,7 +61,7 @@ where
     }
 }
 
-impl<T> Default for Set32<T> {
+impl<T> Default for Set64<T> {
     fn default() -> Self {
         Self {
             bits: 0,
@@ -70,7 +70,7 @@ impl<T> Default for Set32<T> {
     }
 }
 
-impl<T> Set32<T>
+impl<T> Set64<T>
 where
     T: From<u8> + Into<u8>,
 {
@@ -81,7 +81,7 @@ where
         }
     }
 
-    pub fn from_u32(bits: u32) -> Self {
+    pub fn from_u64(bits: u64) -> Self {
         Self {
             bits,
             _marker: Default::default(),
@@ -134,12 +134,12 @@ where
 #[cfg(test)]
 mod tests {
     use crate::Edge;
-    use crate::Set32;
+    use crate::Set64;
 
     #[test]
-    fn test_set32_edge() {
+    fn test_set64_edge() {
         use Edge::*;
-        let mut s = [UF, UR, FL].into_iter().collect::<Set32<_>>();
+        let mut s = [UF, UR, FL].into_iter().collect::<Set64<_>>();
         assert_eq!(s.len(), 3);
         assert_eq!(s.contains(UF), true);
         assert_eq!(s.contains(UL), false);

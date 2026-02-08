@@ -268,6 +268,22 @@ impl Edges {
         a.iter().fold(self, |acc, m| acc.apply_move(m))
     }
 
+    pub fn apply_sym(self, s: Sym) -> Self {
+        self + s.cube().edges
+    }
+
+    pub fn conjugate_sym(self, s: Sym) -> Self {
+        Edges::new().apply_sym(s).compose(self).apply_sym(s.inverse())
+    }
+
+    pub fn index_eofb(self) -> usize {
+        ops::index_eofb(self.0)
+    }
+
+    pub fn unindex_eofb(coord: usize) -> Self {
+        Edges(ops::unindex_eofb(coord))
+    }
+
     pub fn is_drud(self) -> bool {
         self.is_eofb() && self.is_eolr()
     }
@@ -282,6 +298,10 @@ impl Edges {
     
     pub fn is_eoud(self) -> bool {
         ops::eoud(self.0) == u8x16::splat(0)
+    }
+
+    pub fn is_solved(self) -> bool {
+        self.0 == ops::EDGES_IDENT
     }
 }
 

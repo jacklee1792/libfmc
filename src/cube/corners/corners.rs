@@ -246,6 +246,21 @@ impl Corners {
         self.compose(c)
     }
 
+    pub fn apply_sym(self, s: Sym) -> Self {
+        let mut ret = self + s.cube().corners;
+        // For symmetries that involve a mirror, this isn't a pure cube composition so
+        // we need to flip CO=1 <-> CO=2.
+        if !s.is_rotation() {
+            let coud = ops::invert_nonzero(ops::coud(ret.0));
+            ret.0 = ops::set_coud(ret.0, coud);
+        }
+        ret
+    }
+
+    pub fn conjugate_sym(self, s: Sym) -> Self {
+        Corners::new().apply_sym(s).compose(self).apply_sym(s.inverse())
+    }
+
     pub fn apply_rotation(self, r: Rotation) -> Self {
         todo!()
     }
@@ -328,6 +343,10 @@ impl Corners {
             loc[c as usize] = Some(slot);
         }
         Ok(())
+    }
+
+    pub fn is_solved(self) -> bool {
+        self.0 == ops::CORNERS_IDENT
     }
 
     pub fn is_drud(self) -> bool {

@@ -6,13 +6,13 @@ use std::array;
 
 /// Cayley table for the group of 48 cube symmetries
 static SYM_ADD_TABLE: LazyLock<[[Sym; 48]; 48]> = LazyLock::new(|| {
-    let syms: [Cube; 48] = array::from_fn(|i| {
-        Sym::from_u8(i as u8).apply_to(Cube::new())
+    let syms: [Cube; 48] = Sym::all().map(|s| {
+        Cube::new().apply_sym(s)
     });
     let table: [[Sym; 48]; 48] = array::from_fn(|i| {
         let a = syms[i];
         array::from_fn(|j| {
-            let ab = Sym::from_u8(j as u8).apply_to(a);
+            let ab = a.apply_sym(Sym::from_u8(j as u8));
             let mut res: Option<Sym> = None;
             for k in 0..48 {
                 if ab == syms[k] {
@@ -26,7 +26,25 @@ static SYM_ADD_TABLE: LazyLock<[[Sym; 48]; 48]> = LazyLock::new(|| {
     table
 });
 
+static SYM_INVERSE_TABLE: LazyLock<[Sym; 48]> = LazyLock::new(|| {
+    let syms: [Cube; 48] = Sym::all().map(|s| {
+        Cube::new().apply_sym(s)
+    });
+    array::from_fn(|i| {
+        let a = syms[i];
+        let mut res: Option<Sym> = None;
+        for j in 0..48 {
+            let ab = a.apply_sym(Sym::from_u8(j as u8));
+            if ab.is_solved() {
+                res = Some(Sym::from_u8(j as u8));
+            }
+        }
+        res.unwrap()
+    })
+});
+
 // copies the edge enum and adds mirrors
+// TODO this is kinda ugly because the identity is not 0
 // a sym XY means we move sticker XY to UF
 // XYm means do XY, and then mirror across M slice
 #[repr(u8)]
@@ -82,6 +100,18 @@ pub enum Sym {
     LFm = 47,
 }
 
+impl Into<u8> for Sym {
+    fn into(self) -> u8 {
+        self as u8
+    }
+}
+
+impl From<u8> for Sym {
+    fn from(x: u8) -> Self {
+        Self::from_u8(x)
+    }
+}
+
 impl Add<Self> for Sym {
     type Output = Self;
 
@@ -103,122 +133,17 @@ impl Sym {
     }
 
     pub const fn all() -> [Sym; 48] {
-        use Sym::*;
-        [
-            DR,
-            UR,
-            DL,
-            UL,
-            UF,
-            DF,
-            DB,
-            UB,
-            FR,
-            BR,
-            BL,
-            FL,
-            RU,
-            RD,
-            LD,
-            LU,
-            FU,
-            FD,
-            BD,
-            BU,
-            RF,
-            RB,
-            LB,
-            LF,
-            URm,
-            DRm,
-            DLm,
-            ULm,
-            UFm,
-            DFm,
-            DBm,
-            UBm,
-            FRm,
-            BRm,
-            BLm,
-            FLm,
-            RUm,
-            RDm,
-            LDm,
-            LUm,
-            FUm,
-            FDm,
-            BDm,
-            BUm,
-            RFm,
-            RBm,
-            LBm,
-            LFm,
-        ]
-    }
-
-    pub const fn inverse(self) -> Self {
-        use Sym::*;
-        match self {
-            UR => UL,
-            DR => DR,
-            DL => DL,
-            UL => UR,
-            UF => UF,
-            DF => DF,
-            DB => DB,
-            UB => UB,
-            FR => RU,
-            BR => LD,
-            BL => RD,
-            FL => LU,
-            RU => FR,
-            RD => BL,
-            LD => BR,
-            LU => FL,
-            FU => FU,
-            FD => BD,
-            BD => BD,
-            BU => FD,
-            RF => LF,
-            RB => RB,
-            LB => LB,
-            LF => RF,
-            URm => ULm,
-            DRm => DLm,
-            DLm => DRm,
-            ULm => URm,
-            UFm => UFm,
-            DFm => DFm,
-            DBm => DBm,
-            UBm => UBm,
-            FRm => LUm,
-            BRm => RDm,
-            BLm => LDm,
-            FLm => RUm,
-            RUm => FLm,
-            RDm => BRm,
-            LDm => BLm,
-            LUm => FRm,
-            FUm => FUm,
-            FDm => BUm,
-            BDm => BDm,
-            BUm => FDm,
-            RFm => RFm,
-            RBm => LBm,
-            LBm => RBm,
-            LFm => LFm,
-        }
-    }
-
-    pub fn apply_to(self, c: Cube) -> Cube {
-        // Mirroring transformations can't be represented as a cube op, sad
-        let mut ret = c + self.cube();
-        if !self.is_rotation() {
-            // make into method on corners ??
-            let coud = corners::ops::invert_nonzero(corners::ops::coud(ret.corners.0));
-            ret.corners.0 = corners::ops::set_coud(ret.corners.0, coud);
+        let mut ret = [Sym::UF; 48];
+        let mut i = 0;
+        while i < 48 {
+            ret[i] = Sym::from_u8(i as u8);
+            i += 1;
         }
         ret
+    }
+
+    pub fn inverse(self) -> Self {
+        SYM_INVERSE_TABLE[self as usize]
     }
 
     pub fn cube(self) -> Cube {
@@ -328,6 +253,13 @@ mod tests {
         for i in 0..48 {
             let s: HashSet<Sym> = HashSet::from_iter(SYM_ADD_TABLE[i]);
             assert_eq!(s.len(), 48);
+        }
+    }
+
+    #[test]
+    pub fn test_inverse() {
+        for sym in Sym::all() {
+            assert_eq!(sym + sym.inverse(), Sym::UF)
         }
     }
 }

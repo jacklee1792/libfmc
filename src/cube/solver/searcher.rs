@@ -1,10 +1,10 @@
 use crate::Alg;
 use crate::Cube;
 use crate::Move;
-use crate::Set32;
+use crate::Set64;
 
 struct Frame {
-    moves: Set32<Move>,
+    moves: Set64<Move>,
     cube: Cube,
 }
 
@@ -37,8 +37,8 @@ impl<'a> SearcherMoves<'a> {
 
 pub struct Searcher {
     stack: Vec<Frame>,
-    succs: [Set32<Move>; 18],
-    moveset: Set32<Move>,
+    succs: [Set64<Move>; 18],
+    moveset: Set64<Move>,
     start: Cube,
     pruned: bool,
 }
@@ -51,7 +51,7 @@ impl Default for Searcher {
 
 impl Searcher {
     pub fn new(start: Cube, moveset: impl IntoIterator<Item = Move>) -> Self {
-        let moveset = moveset.into_iter().collect::<Set32<_>>();
+        let moveset = moveset.into_iter().collect::<Set64<_>>();
         Searcher {
             start,
             moveset: moveset.clone(),
@@ -61,7 +61,7 @@ impl Searcher {
                 moveset
                     .into_iter()
                     .filter(|next| next.canonically_succeeds(m))
-                    .collect::<Set32<_>>()
+                    .collect::<Set64<_>>()
             }),
             pruned: false,
         }
@@ -84,7 +84,7 @@ impl Iterator for Searcher {
         if !self.pruned {
             let frame = match self.stack.as_slice() {
                 [] => Frame {
-                    moves: Set32::new(),
+                    moves: Set64::new(),
                     cube: self.start,
                 },
                 [top] => Frame {

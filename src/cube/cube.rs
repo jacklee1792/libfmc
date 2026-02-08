@@ -63,11 +63,29 @@ impl Cube {
         }
     }
 
+    pub fn apply_sym(self, s: Sym) -> Self {
+        Cube {
+            edges: self.edges.apply_sym(s),
+            corners: self.corners.apply_sym(s),
+        }
+    }
+
+    pub fn conjugate_sym(self, s: Sym) -> Self {
+        Cube {
+            edges: self.edges.conjugate_sym(s),
+            corners: self.corners.conjugate_sym(s),
+        }
+    }
+
     pub fn compose(self, c: Cube) -> Self {
         Cube {
             edges: self.edges.compose(c.edges),
             corners: self.corners.compose(c.corners),
         }
+    }
+
+    pub fn is_solved(self) -> bool {
+        self.edges.is_solved() && self.corners.is_solved()
     }
 
     pub fn is_drud(self) -> bool {
