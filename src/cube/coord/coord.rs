@@ -63,7 +63,7 @@ where
                 continue;
             }
             // Otherwise, a is a newly discovered conjugacy class, mark
-            // all coordinates in the same class 
+            // all coordinates in the same class
             let a = C::unindex(a_coord);
             let mut ssyms = Set64::<Sym>::new();
             for sym in C::SYMS {
@@ -82,7 +82,10 @@ where
         }
 
         Self {
-            coord_canonicalizer: coord_canonicalizer.into_iter().map(Option::unwrap).collect(),
+            coord_canonicalizer: coord_canonicalizer
+                .into_iter()
+                .map(Option::unwrap)
+                .collect(),
             coord_cls: coord_cls,
             class_rep: class_rep,
             class_ssym: class_ssym,
@@ -113,7 +116,6 @@ where
         c.conjugate_sym(sym)
     }
 }
-
 
 #[cfg(test)]
 mod tests {

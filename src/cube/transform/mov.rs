@@ -82,14 +82,14 @@ impl TryFrom<&str> for Move {
 }
 
 impl From<u8> for Move {
-    fn from(value: u8) -> Self {  
+    fn from(value: u8) -> Self {
         Self::from_u8(value)
     }
 }
 
 impl From<Move> for u8 {
     fn from(value: Move) -> Self {
-       value as u8 
+        value as u8
     }
 }
 
@@ -101,7 +101,7 @@ impl Add<Self> for Move {
         let (m2, n2) = rhs.decompose();
         if m1 != m2 {
             return None;
-        } 
+        }
         let n = (n1 + n2) % 4;
         match (m1, n) {
             (Face::F, 1) => Some(Move::F),
@@ -134,7 +134,7 @@ impl Move {
             U, U2, U3, D, D2, D3, F, F2, F3, B, B2, B3, R, R2, R3, L, L2, L3,
         ]
     }
-    
+
     pub const fn from_u8(x: u8) -> Self {
         debug_assert!(x < 18);
         unsafe { std::mem::transmute::<u8, Move>(x) }

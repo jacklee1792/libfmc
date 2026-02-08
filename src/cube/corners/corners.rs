@@ -1,13 +1,13 @@
+use super::ops;
 use crate::*;
 use std::{
+    fmt::{self, Debug},
     ops::Add,
     simd::{
         cmp::{SimdOrd, SimdPartialEq},
         u8x8,
     },
-    fmt::{self, Debug},
 };
-use super::ops;
 
 /// Corners of the cube.
 ///
@@ -97,7 +97,10 @@ impl Corners {
 
     /// A view of the piece at the given slot.
     pub fn at(&self, slot: Corner) -> CornerRef<'_> {
-        CornerRef { slot, corners: self }
+        CornerRef {
+            slot,
+            corners: self,
+        }
     }
 
     /// The slot where the given `Corner` currently resides.
@@ -115,7 +118,7 @@ impl Corners {
     pub const fn magic(self) -> u64 {
         u64::from_le_bytes(self.0.to_array())
     }
-    
+
     /// Modify CP by specifying for each location which corner populates it. Preserves CO on UD.
     pub fn set_cp_passive<F>(&self, mut f: F) -> Self
     where
@@ -146,7 +149,8 @@ impl Corners {
     }
 
     pub fn cycle_dr<I>(cycle: I, axis: Axis) -> Self
-    where I: IntoIterator<Item = Corner>
+    where
+        I: IntoIterator<Item = Corner>,
     {
         match axis {
             Axis::UD => Self::cycle_drud(cycle),
@@ -159,7 +163,8 @@ impl Corners {
     /// slot in the cycle, and so on with the last slot in the cycle being sent to the first slot
     /// in the cycle.
     pub fn cycle_drud<I>(cycle: I) -> Self
-    where I: IntoIterator<Item = Corner>
+    where
+        I: IntoIterator<Item = Corner>,
     {
         let cycle = cycle.into_iter().collect::<Vec<_>>();
         let mut cp = CORNERS_IDENT;
@@ -176,16 +181,20 @@ impl Corners {
     /// slot in the cycle, and so on with the last slot in the cycle being sent to the first slot
     /// in the cycle.
     pub fn cycle_drfb<I>(cycle: I) -> Self
-    where I: IntoIterator<Item = Corner> {
+    where
+        I: IntoIterator<Item = Corner>,
+    {
         let ret = ops::set_cofb(Self::cycle_drud(cycle).0, u8x8::splat(0));
         Self(ret)
     }
-    
+
     /// A cycle which preserves CO on LR. The first slot in the cycle is sent to the second
     /// slot in the cycle, and so on with the last slot in the cycle being sent to the first slot
     /// in the cycle.
     pub fn cycle_drlr<I>(cycle: I) -> Self
-    where I: IntoIterator<Item = Corner> {
+    where
+        I: IntoIterator<Item = Corner>,
+    {
         let ret = ops::set_colr(Self::cycle_drud(cycle).0, u8x8::splat(0));
         Self(ret)
     }
@@ -258,7 +267,10 @@ impl Corners {
     }
 
     pub fn conjugate_sym(self, s: Sym) -> Self {
-        Corners::new().apply_sym(s).compose(self).apply_sym(s.inverse())
+        Corners::new()
+            .apply_sym(s)
+            .compose(self)
+            .apply_sym(s.inverse())
     }
 
     pub fn apply_rotation(self, r: Rotation) -> Self {
@@ -266,9 +278,7 @@ impl Corners {
     }
 
     pub fn apply_alg(&self, a: &Alg) -> Self {
-        a.iter().fold(*self, |acc, m| {
-            acc.apply_move(m)
-        })
+        a.iter().fold(*self, |acc, m| acc.apply_move(m))
     }
 }
 
@@ -321,7 +331,7 @@ impl Corners {
         let ret = ops::lane_cofb(self.0, slot as usize);
         CO::from(ret)
     }
-    
+
     /// Get CO relative to the LR axis at the given slot.
     pub fn colr(self, slot: Corner) -> CO {
         let ret = ops::lane_colr(self.0, slot as usize);
@@ -338,7 +348,10 @@ impl Corners {
         for slot in Corner::all() {
             let c = self.at(slot).piece();
             if let Some(prev_slot) = loc[c as usize] {
-                return Err(format!("Corner {} appears twice: first at {}, and at {}", c, prev_slot, slot));
+                return Err(format!(
+                    "Corner {} appears twice: first at {}, and at {}",
+                    c, prev_slot, slot
+                ));
             }
             loc[c as usize] = Some(slot);
         }
@@ -424,8 +437,8 @@ mod tests {
         let mut s = String::new();
         for m in Move::all() {
             let (f, n) = m.decompose();
-            use Face::*;
             use Corner::*;
+            use Face::*;
             let cycle = match f {
                 U => Corners::cycle_drud([UFR, UFL, UBL, UBR]),
                 F => Corners::cycle_drfb([UFR, DFR, DFL, UFL]),
@@ -461,15 +474,16 @@ mod tests {
             L => Corners::from_magic(0x1406050b1002010f),
             L2 => Corners::from_magic(0x0306050007020104),
             L3 => Corners::from_magic(0x1006050f1402010b),
-        ")
+        "
+        )
     }
 
     fn test_gen_rotate() {
         let mut s = String::new();
         for m in Move::all() {
             let (f, n) = m.decompose();
-            use Face::*;
             use Corner::*;
+            use Face::*;
             let cycle = match f {
                 U => Corners::cycle_drud([UFR, UFL, UBL, UBR]),
                 F => Corners::cycle_drfb([UFR, DFR, DFL, UFL]),
@@ -505,7 +519,8 @@ mod tests {
             L => Corners::from_magic(0x1406050b1002010f),
             L2 => Corners::from_magic(0x0306050007020104),
             L3 => Corners::from_magic(0x1006050f1402010b),
-        ")
+        "
+        )
     }
 
     fn foo() {

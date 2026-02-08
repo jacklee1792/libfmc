@@ -95,4 +95,3 @@ impl Corner {
         Tetrad::from_u8((*self as u8) & 1)
     }
 }
-

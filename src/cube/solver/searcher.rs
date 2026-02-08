@@ -131,14 +131,14 @@ impl Iterator for Searcher {
 #[derive(Default)]
 pub struct IDASearcher {
     n: usize,
-    searcher: Searcher, 
+    searcher: Searcher,
 }
 
 impl IDASearcher {
     pub fn new(start: Cube, moveset: impl IntoIterator<Item = Move>) -> Self {
         Self {
             n: 0,
-            searcher: Searcher::new(start, moveset)
+            searcher: Searcher::new(start, moveset),
         }
     }
 
@@ -187,7 +187,7 @@ mod tests {
                 break;
             }
             println!("{}", s.moves().alg());
-        } 
+        }
     }
 
     #[test]

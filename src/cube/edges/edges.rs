@@ -4,8 +4,8 @@ use std::fmt;
 use std::fmt::Debug;
 use std::ops::Add;
 use std::simd::cmp::SimdPartialEq;
-use std::simd::u8x16;
 use std::simd::mask8x16;
+use std::simd::u8x16;
 
 /// Edges of the cube.
 ///
@@ -194,7 +194,8 @@ impl Edges {
     /// Flip the given edges. If an edge is provided multiple times, it will flip once for each
     /// time it's provided.
     pub fn flip<I>(edges: I) -> Self
-    where I: IntoIterator<Item = Edge>
+    where
+        I: IntoIterator<Item = Edge>,
     {
         let mut flips = [false; 16];
         for edge in edges.into_iter() {
@@ -273,7 +274,10 @@ impl Edges {
     }
 
     pub fn conjugate_sym(self, s: Sym) -> Self {
-        Edges::new().apply_sym(s).compose(self).apply_sym(s.inverse())
+        Edges::new()
+            .apply_sym(s)
+            .compose(self)
+            .apply_sym(s.inverse())
     }
 
     pub fn index_eofb(self) -> usize {
@@ -291,11 +295,11 @@ impl Edges {
     pub fn is_eofb(self) -> bool {
         ops::eofb(self.0) == u8x16::splat(0)
     }
-    
+
     pub fn is_eolr(self) -> bool {
         ops::eolr(self.0) == u8x16::splat(0)
     }
-    
+
     pub fn is_eoud(self) -> bool {
         ops::eoud(self.0) == u8x16::splat(0)
     }

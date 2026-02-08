@@ -10,7 +10,10 @@ pub struct Set64<T> {
 #[derive(Default)]
 pub struct Set64Iter<T>(Set64<T>);
 
-impl<T> FromIterator<T> for Set64<T> where T: From<u8> + Into<u8> {
+impl<T> FromIterator<T> for Set64<T>
+where
+    T: From<u8> + Into<u8>,
+{
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         let mut ret = Self::default();
         for x in iter {
@@ -20,7 +23,10 @@ impl<T> FromIterator<T> for Set64<T> where T: From<u8> + Into<u8> {
     }
 }
 
-impl<T> Iterator for Set64Iter<T> where T: From<u8> + Into<u8> {
+impl<T> Iterator for Set64Iter<T>
+where
+    T: From<u8> + Into<u8>,
+{
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -32,13 +38,15 @@ impl<T> Iterator for Set64Iter<T> where T: From<u8> + Into<u8> {
     }
 }
 
-impl<T> IntoIterator for Set64<T> where T: From<u8> + Into<u8>
+impl<T> IntoIterator for Set64<T>
+where
+    T: From<u8> + Into<u8>,
 {
     type Item = T;
     type IntoIter = Set64Iter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        Set64Iter(self) 
+        Set64Iter(self)
     }
 }
 
@@ -56,7 +64,11 @@ where
     T: Debug + From<u8> + Into<u8>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let items = self.clone().into_iter().map(|x| format!("{:?}", x)).collect::<Vec<_>>();
+        let items = self
+            .clone()
+            .into_iter()
+            .map(|x| format!("{:?}", x))
+            .collect::<Vec<_>>();
         write!(f, "{{{}}}", items.join(", "))
     }
 }

@@ -15,8 +15,7 @@ impl Add<Self> for Cube {
     }
 }
 
-impl From<Alg> for Cube
-{
+impl From<Alg> for Cube {
     fn from(alg: Alg) -> Self {
         Self::default().apply_alg(alg)
     }
@@ -45,7 +44,10 @@ impl Cube {
         Self::default()
     }
 
-    pub fn from_alg<A>(a: A) -> Self where A: Into<Alg> {
+    pub fn from_alg<A>(a: A) -> Self
+    where
+        A: Into<Alg>,
+    {
         Self::new().apply_alg(a.into())
     }
 
@@ -116,7 +118,7 @@ use std::fmt::Debug;
 
 impl Debug for Cube {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Edges\n{:?}\nCorners\n{:?}", self.edges, self.corners) 
+        write!(f, "Edges\n{:?}\nCorners\n{:?}", self.edges, self.corners)
     }
 }
 

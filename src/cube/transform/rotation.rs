@@ -19,7 +19,7 @@ impl Display for Rotation {
         use Rotation::*;
         match self {
             X => write!(f, "x"),
-            X2 => write!(f, "x2"), 
+            X2 => write!(f, "x2"),
             X3 => write!(f, "x'"),
             Y => write!(f, "y"),
             Y2 => write!(f, "y2"),
@@ -36,13 +36,13 @@ impl TryFrom<&str> for Rotation {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "x"  => Ok(Rotation::X),
+            "x" => Ok(Rotation::X),
             "x2" => Ok(Rotation::X2),
             "x'" => Ok(Rotation::X3),
-            "y"  => Ok(Rotation::Y),
+            "y" => Ok(Rotation::Y),
             "y2" => Ok(Rotation::Y2),
             "y'" => Ok(Rotation::Y3),
-            "z"  => Ok(Rotation::Z),
+            "z" => Ok(Rotation::Z),
             "z2" => Ok(Rotation::Z2),
             "z'" => Ok(Rotation::Z3),
             other => Err(format!("Invalid rotation: {other}")),
@@ -51,14 +51,14 @@ impl TryFrom<&str> for Rotation {
 }
 
 impl From<u8> for Rotation {
-    fn from(value: u8) -> Self {  
+    fn from(value: u8) -> Self {
         Self::from_u8(value)
     }
 }
 
 impl From<Rotation> for u8 {
     fn from(value: Rotation) -> Self {
-       value as u8 
+        value as u8
     }
 }
 

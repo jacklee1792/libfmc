@@ -1,8 +1,8 @@
 use std::ops::{BitAnd, Shr};
-use std::simd::{u8x16, usizex16};
-use std::simd::mask8x16;
 use std::simd::cmp::{SimdOrd, SimdPartialEq};
+use std::simd::mask8x16;
 use std::simd::num::SimdUint;
+use std::simd::{u8x16, usizex16};
 
 use crate::CORNERS_IDENT;
 
@@ -17,8 +17,10 @@ use crate::CORNERS_IDENT;
 // then CO on all axes is the same at `s`. Otherwise, CO on FB and LR can be deduced from CO on
 // UD with following.
 
-pub const EP_IDENT: u8x16 = u8x16::from_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
-pub const EDGES_IDENT: u8x16 = u8x16::from_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+pub const EP_IDENT: u8x16 =
+    u8x16::from_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+pub const EDGES_IDENT: u8x16 =
+    u8x16::from_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
 
 pub const EP_LANE_MASK: u8 = 0b00001111;
 pub const EP_MASK: u8x16 = u8x16::splat(EP_LANE_MASK);
@@ -109,13 +111,12 @@ pub fn compose(a: u8x16, b: u8x16) -> u8x16 {
 /// Get a vector corresponding to EO on FB.
 pub fn eofb(a: u8x16) -> u8x16 {
     (a & EOFB_MASK) >> EOFB_SHIFT
-} 
-
+}
 
 /// Get a vector corresponding to EO on LR.
 pub fn eolr(a: u8x16) -> u8x16 {
     (a & EOLR_MASK) >> EOLR_SHIFT
-} 
+}
 
 /// Get a vector corresponding to EO on UD.
 pub fn eoud(a: u8x16) -> u8x16 {
@@ -178,7 +179,6 @@ pub fn lane_set_ep(mut a: u8x16, i: usize, ep: u8) -> u8x16 {
 // 	- fb <> ud: 1
 // 	- fb <> lr: 1
 
-
 // one-hot encoding, eofb to eoud
 pub fn eofb_to_eoud(ep: u8x16) -> u8x16 {
     let s = (ep ^ EDGES_IDENT) >> 2;
@@ -223,15 +223,13 @@ pub fn set_eoud(a: u8x16, eoud: u8x16) -> u8x16 {
 
 /// A cube that flips the given edges.
 pub fn flip(edges: mask8x16) -> u8x16 {
-    EDGES_IDENT ^ edges.select(
-        EO_MASK,
-        u8x16::splat(0),
-    )
+    EDGES_IDENT ^ edges.select(EO_MASK, u8x16::splat(0))
 }
 
 // eofb coordinate of the first 11 edges
 pub fn index_eofb(a: u8x16) -> usize {
-    const MULT: usizex16 = usizex16::from_array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 0, 0, 0, 0, 0]);
+    const MULT: usizex16 =
+        usizex16::from_array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 0, 0, 0, 0, 0]);
     (eofb(a).cast() * MULT).reduce_sum()
 }
 
@@ -239,8 +237,11 @@ pub fn unindex_eofb(coord: usize) -> u8x16 {
     debug_assert!(coord < 2048);
     // infer parity bit
     let coord = coord + (2048 * (coord.count_ones() & 1)) as usize;
-    const MULT: usizex16 = usizex16::from_array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 0, 0, 0, 0]);
-    const SH: usizex16 = usizex16::from_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 64, 64, 64, 64]);
+    const MULT: usizex16 = usizex16::from_array([
+        1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 0, 0, 0, 0,
+    ]);
+    const SH: usizex16 =
+        usizex16::from_array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 64, 64, 64, 64]);
     let eofb = usizex16::splat(coord).bitand(MULT).shr(SH);
     set_eofb(EDGES_IDENT, eofb.cast())
 }

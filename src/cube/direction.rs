@@ -18,7 +18,7 @@ impl AddAssign<Direction> for Direction {
 impl Add<Direction> for Direction {
     type Output = Direction;
 
-    fn add(self, rhs: Direction) -> Self::Output { 
+    fn add(self, rhs: Direction) -> Self::Output {
         Self::from_u8(((self as u8) + (rhs as u8)) % 4)
     }
 }

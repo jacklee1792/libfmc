@@ -1,5 +1,5 @@
-use crate::*;
 use super::ops;
+use crate::*;
 
 /// View of a single corner slot on the cube.
 #[derive(Copy, Clone)]

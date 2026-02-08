@@ -22,8 +22,8 @@ pub enum Edge {
     DB = 6, // 0110
     UB = 7, // 0111
     // E slice
-    FR = 8, // 1000
-    BR = 9, // 1001
+    FR = 8,  // 1000
+    BR = 9,  // 1001
     BL = 10, // 1010
     FL = 11, // 1011
 }
@@ -36,7 +36,7 @@ impl From<u8> for Edge {
 
 impl From<Edge> for u8 {
     fn from(x: Edge) -> Self {
-        x as u8 
+        x as u8
     }
 }
 

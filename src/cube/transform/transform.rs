@@ -8,7 +8,6 @@ pub enum Transform {
     SliceMove(SliceMove),
 }
 
-
 impl Display for Transform {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Transform::*;
@@ -39,9 +38,9 @@ impl TryFrom<&str> for Transform {
 #[cfg(test)]
 mod tests {
     use crate::Move;
-    use crate::Transform;
-    use crate::SliceMove;
     use crate::Rotation;
+    use crate::SliceMove;
+    use crate::Transform;
 
     #[test]
     fn test_from_str() {

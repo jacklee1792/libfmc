@@ -1,7 +1,7 @@
 /// Me: Mom, can I have Jane Street?
 ///
 /// Mom: No, we have Jane Street at home
-/// 
+///
 /// Jane Street at home:
 #[macro_export]
 macro_rules! expect {
@@ -23,8 +23,7 @@ macro_rules! expect {
                 if __left != __right {
                     panic!(
                         "expect test failed\n\noutput:\n{}\n\nexpected:\n{}\n",
-                        lexpr,
-                        rexpr,
+                        lexpr, rexpr,
                     );
                 }
             }

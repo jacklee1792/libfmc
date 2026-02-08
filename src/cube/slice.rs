@@ -1,6 +1,6 @@
-use std::fmt::Display;
-use std::fmt::Debug;
 use super::*;
+use std::fmt::Debug;
+use std::fmt::Display;
 
 // DANGER !! Not safe to renumber, same as `Axis`
 #[repr(u8)]

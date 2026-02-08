@@ -21,7 +21,7 @@ impl Add<Self> for EO {
 
 impl From<u8> for EO {
     fn from(x: u8) -> Self {
-        Self::from_u8(x) 
+        Self::from_u8(x)
     }
 }
 
@@ -38,4 +38,3 @@ impl EO {
         unsafe { std::mem::transmute::<u8, EO>(x) }
     }
 }
-

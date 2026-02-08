@@ -120,7 +120,11 @@ impl Alg {
                 (Direction::Zero, m.direction())
             };
             match stack.last_mut() {
-                Some(Item{ axis, primary, secondary }) if *axis == m.axis() => { 
+                Some(Item {
+                    axis,
+                    primary,
+                    secondary,
+                }) if *axis == m.axis() => {
                     *primary += p;
                     *secondary += s;
                     if *primary == Direction::Zero && *secondary == Direction::Zero {
@@ -138,7 +142,12 @@ impl Alg {
         }
 
         let mut out = Vec::new();
-        for Item{ axis, primary, secondary } in stack {
+        for Item {
+            axis,
+            primary,
+            secondary,
+        } in stack
+        {
             if let Some(m) = axis.primary().turn(primary) {
                 out.push(m);
             }
@@ -154,7 +163,7 @@ impl Alg {
 mod tests {
     use super::Alg;
     use crate::*;
-    
+
     #[test]
     fn test_canonicalize() {
         let alg = Alg::try_from("R D U").unwrap();
@@ -164,7 +173,7 @@ mod tests {
         let alg = Alg::try_from("R D U D").unwrap();
         let s = format!("{}", alg.canonicalize());
         expect!(s, "R U D2");
-        
+
         let alg = Alg::try_from("B R D D2 D R' F").unwrap();
         let s = format!("{}", alg.canonicalize());
         expect!(s, "F B");

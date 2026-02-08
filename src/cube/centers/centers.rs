@@ -1,6 +1,6 @@
-use std::simd::u8x8;
-use std::ops::Add;
 use super::ops;
+use std::ops::Add;
+use std::simd::u8x8;
 
 use crate::*;
 
@@ -30,7 +30,7 @@ impl Centers {
     pub fn compose(self, rhs: Self) -> Self {
         Self(ops::compose(self.0, rhs.0))
     }
-    
+
     pub const fn magic(self) -> u64 {
         u64::from_le_bytes(self.0.to_array())
     }
@@ -40,7 +40,9 @@ impl Centers {
     }
 
     pub fn cycle<I>(cycle: I) -> Self
-    where I: IntoIterator<Item = Center> {
+    where
+        I: IntoIterator<Item = Center>,
+    {
         let cycle = cycle.into_iter().collect::<Vec<_>>();
         let mut xp = ops::CENTERS_IDENT;
         let n = cycle.len();
@@ -72,7 +74,8 @@ impl Centers {
     }
 
     pub fn rotation<R>(r: R) -> Self
-    where R: Into<Rotation>
+    where
+        R: Into<Rotation>,
     {
         use Rotation::*;
         let r = r.into();
@@ -88,14 +91,14 @@ impl Centers {
             Z3 => Self::slice_move(SliceMove::S3),
         }
     }
-    
+
     pub fn apply_rotation<R>(self, r: R) -> Self
-    where R: Into<Rotation>
+    where
+        R: Into<Rotation>,
     {
         self.compose(Self::rotation(r))
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -140,6 +143,7 @@ mod tests {
             S => Centers::from_magic(0x0706050301020004),
             S2 => Centers::from_magic(0x0706050100020403),
             S3 => Centers::from_magic(0x0706050004020301),
-        ")
+        "
+        )
     }
 }

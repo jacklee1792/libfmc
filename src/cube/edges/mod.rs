@@ -1,7 +1,7 @@
-mod ops;
-mod edges;
 mod edge;
+mod edges;
 mod eo;
+mod ops;
 
 pub use edge::*;
 pub use edges::*;

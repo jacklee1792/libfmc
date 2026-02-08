@@ -1,8 +1,8 @@
-use std::simd::u8x8;
-use std::simd::mask8x8;
-use std::simd::usizex8;
 use std::simd::cmp::{SimdOrd, SimdPartialEq};
+use std::simd::mask8x8;
 use std::simd::num::SimdUint;
+use std::simd::u8x8;
+use std::simd::usizex8;
 
 // Suppose a corner `c` is currently at a slot `s`. If `c` belongs to the same HTR tetrad as `s`,
 // then CO on all axes is the same at `s`. Otherwise, CO on FB and LR can be deduced from CO on
@@ -46,7 +46,7 @@ pub fn lane_cp(a: u8x8, i: usize) -> u8 {
 /// Get a vector corresponding to CO on UD.
 pub fn coud(a: u8x8) -> u8x8 {
     (a & CO_MASK) >> CO_SHIFT
-} 
+}
 
 /// Get CO on UD at a slot.
 pub fn lane_coud(a: u8x8, i: usize) -> u8 {
@@ -64,11 +64,7 @@ pub fn cofb(a: u8x8) -> u8x8 {
 pub fn lane_cofb(a: u8x8, i: usize) -> u8 {
     let coud = lane_coud(a, i);
     let cofb = (coud + COUD_TO_COFB[i]) % 3;
-    if lane_htrbad(a, i) {
-        cofb
-    } else {
-        coud
-    }
+    if lane_htrbad(a, i) { cofb } else { coud }
 }
 
 /// Get a vector corresponding to CO on LR.
@@ -83,11 +79,7 @@ pub fn colr(a: u8x8) -> u8x8 {
 pub fn lane_colr(a: u8x8, i: usize) -> u8 {
     let coud = lane_coud(a, i);
     let colr = (coud + COUD_TO_COLR[i]) % 3;
-    if lane_htrbad(a, i) {
-        colr
-    } else {
-        coud
-    }
+    if lane_htrbad(a, i) { colr } else { coud }
 }
 
 /// Modular additive inverse of a vector mod 3.
@@ -143,11 +135,7 @@ pub fn set_cofb(a: u8x8, cofb: u8x8) -> u8x8 {
 
 pub fn lane_set_cofb(a: u8x8, i: usize, cofb: u8) -> u8x8 {
     let coud = (cofb + COFB_TO_COUD[i]) % 3;
-    let coud = if lane_htrbad(a, i) {
-        coud
-    } else {
-        cofb
-    };
+    let coud = if lane_htrbad(a, i) { coud } else { cofb };
     lane_set_coud(a, i, coud)
 }
 
@@ -159,11 +147,7 @@ pub fn set_colr(a: u8x8, colr: u8x8) -> u8x8 {
 
 pub fn lane_set_colr(a: u8x8, i: usize, colr: u8) -> u8x8 {
     let coud = (colr + COLR_TO_COUD[i]) % 3;
-    let coud = if lane_htrbad(a, i) {
-        coud
-    } else {
-        colr
-    };
+    let coud = if lane_htrbad(a, i) { coud } else { colr };
     lane_set_coud(a, i, coud)
 }
 
@@ -220,7 +204,7 @@ pub fn unprank(mut rank: usize) -> u8x8 {
     let mut l = u8x8::splat(0);
     for i in 0..8 {
         l[i] = (rank / fact[i]) as u8;
-        rank %= fact[i]; 
+        rank %= fact[i];
     }
     unlehmer(l)
 }

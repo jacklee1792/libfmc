@@ -20,7 +20,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         let a = Edges::default() + alg;
         b.iter(|| black_box(a).inverse())
     });
-    
+
     c.bench_function("Corners::compose", |b| {
         let alg = Alg::try_from(
             "R' U' F B2 L2 U2 R2 U' R2 B2 D B2 R2 U' R' F R D2 R F2 D2 R F' L R' U' F",
@@ -29,7 +29,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         let a = Corners::default() + alg;
         b.iter(|| black_box(a).compose(black_box(a)))
     });
-    
+
     c.bench_function("Corners::cofb", |b| {
         let alg = Alg::try_from(
             "R' U' F B2 L2 U2 R2 U' R2 B2 D B2 R2 U' R' F R D2 R F2 D2 R F' L R' U' F",

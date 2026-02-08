@@ -25,7 +25,7 @@ impl Add<Self> for CO {
 
 impl From<u8> for CO {
     fn from(x: u8) -> Self {
-        Self::from_u8(x) 
+        Self::from_u8(x)
     }
 }
 
@@ -43,4 +43,3 @@ impl CO {
         unsafe { std::mem::transmute::<u8, CO>(x) }
     }
 }
-

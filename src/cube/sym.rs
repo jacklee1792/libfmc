@@ -1,14 +1,12 @@
-use crate::*;
 use crate::cube::corners;
+use crate::*;
+use std::array;
 use std::ops::Add;
 use std::sync::LazyLock;
-use std::array;
 
 /// Cayley table for the group of 48 cube symmetries
 static SYM_ADD_TABLE: LazyLock<[[Sym; 48]; 48]> = LazyLock::new(|| {
-    let syms: [Cube; 48] = Sym::all().map(|s| {
-        Cube::new().apply_sym(s)
-    });
+    let syms: [Cube; 48] = Sym::all().map(|s| Cube::new().apply_sym(s));
     let table: [[Sym; 48]; 48] = array::from_fn(|i| {
         let a = syms[i];
         array::from_fn(|j| {
@@ -27,9 +25,7 @@ static SYM_ADD_TABLE: LazyLock<[[Sym; 48]; 48]> = LazyLock::new(|| {
 });
 
 static SYM_INVERSE_TABLE: LazyLock<[Sym; 48]> = LazyLock::new(|| {
-    let syms: [Cube; 48] = Sym::all().map(|s| {
-        Cube::new().apply_sym(s)
-    });
+    let syms: [Cube; 48] = Sym::all().map(|s| Cube::new().apply_sym(s));
     array::from_fn(|i| {
         let a = syms[i];
         let mut res: Option<Sym> = None;
@@ -122,7 +118,7 @@ impl Add<Self> for Sym {
 
 impl Sym {
     /// Whether the symmetry is a pure rotation (i.e. it doesn't involve
-    /// a mirroring operation). 
+    /// a mirroring operation).
     pub const fn is_rotation(self) -> bool {
         (self as u8) < 24
     }
@@ -147,8 +143,8 @@ impl Sym {
     }
 
     pub fn cube(self) -> Cube {
-        use Sym::*;
         use Move::*;
+        use Sym::*;
         let m_edges = [Edge::UF, Edge::UB, Edge::DB, Edge::DF];
         let e_edges = [Edge::FR, Edge::FL, Edge::BL, Edge::BR];
         let s_edges = [Edge::UR, Edge::DR, Edge::DL, Edge::UL];
@@ -157,30 +153,26 @@ impl Sym {
         let s = Cube::from(Edges::cycle_eolr(s_edges) + Edges::flip(s_edges));
 
         let lr = Cube {
-            edges: (
-                Edges::cycle_eofb([Edge::UL, Edge::UR]) +
-                Edges::cycle_eofb([Edge::DL, Edge::DR]) +
-                Edges::cycle_eofb([Edge::FL, Edge::FR]) +
-                Edges::cycle_eofb([Edge::BL, Edge::BR])
-            ),
-            corners: (
-                Corners::cycle_drud([Corner::UFL, Corner::UFR]) +
-                Corners::cycle_drud([Corner::UBL, Corner::UBR]) +
-                Corners::cycle_drud([Corner::DFL, Corner::DFR]) +
-                Corners::cycle_drud([Corner::DBL, Corner::DBR])
-            )
+            edges: (Edges::cycle_eofb([Edge::UL, Edge::UR])
+                + Edges::cycle_eofb([Edge::DL, Edge::DR])
+                + Edges::cycle_eofb([Edge::FL, Edge::FR])
+                + Edges::cycle_eofb([Edge::BL, Edge::BR])),
+            corners: (Corners::cycle_drud([Corner::UFL, Corner::UFR])
+                + Corners::cycle_drud([Corner::UBL, Corner::UBR])
+                + Corners::cycle_drud([Corner::DFL, Corner::DFR])
+                + Corners::cycle_drud([Corner::DBL, Corner::DBR])),
         };
-        
+
         match self {
             UF => Cube::default(),
-            FD => Cube::from(alg![R, L3]) + m3, // x
-            DB => FD.cube() + FD.cube(), // x2
+            FD => Cube::from(alg![R, L3]) + m3,      // x
+            DB => FD.cube() + FD.cube(),             // x2
             BU => FD.cube() + FD.cube() + FD.cube(), // x'
-            UR => Cube::from(alg![U, D3]) + e3, // y
-            UB => UR.cube() + UR.cube(), // y2
+            UR => Cube::from(alg![U, D3]) + e3,      // y
+            UB => UR.cube() + UR.cube(),             // y2
             UL => UR.cube() + UR.cube() + UR.cube(), // y'
-            LF => Cube::from(alg![F, B3]) + s, // z
-            DF => LF.cube() + LF.cube(), // z2
+            LF => Cube::from(alg![F, B3]) + s,       // z
+            DF => LF.cube() + LF.cube(),             // z2
             RF => LF.cube() + LF.cube() + LF.cube(), // z'
             DR => UL.cube() + DB.cube(),
             DL => UR.cube() + DB.cube(),
@@ -240,7 +232,7 @@ mod tests {
     pub fn test_syms_unique() {
         for i in 0..48 {
             let a = Sym::from_u8(i);
-            for j in (i+1)..48 {
+            for j in (i + 1)..48 {
                 let b = Sym::from_u8(j);
                 assert_ne!(a.cube(), b.cube());
             }

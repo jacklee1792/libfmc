@@ -1,5 +1,5 @@
-use std::fmt::Display;
 use crate::*;
+use std::fmt::Display;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Face {
