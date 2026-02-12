@@ -3,6 +3,7 @@ use crate::Cube;
 use crate::Move;
 use crate::Set64;
 
+#[derive(Clone)]
 struct Frame {
     moves: Set64<Move>,
     cube: Cube,
@@ -35,6 +36,7 @@ impl<'a> SearcherMoves<'a> {
     }
 }
 
+#[derive(Clone)]
 pub struct Searcher {
     stack: Vec<Frame>,
     succs: [Set64<Move>; 18],
@@ -73,6 +75,10 @@ impl Searcher {
 
     pub fn prune(&mut self) {
         self.pruned = true;
+    }
+
+    pub fn reset(&mut self) {
+        *self = Searcher::new(self.start, self.moveset);
     }
 }
 
@@ -130,12 +136,19 @@ impl Iterator for Searcher {
 /// Thin wrapper around `Searcher` that yields results in order of length.
 #[derive(Default)]
 pub struct IDASearcher {
-    n: usize,
-    searcher: Searcher,
+    pub n: usize,
+    pub searcher: Searcher,
 }
 
 impl IDASearcher {
-    pub fn new(start: Cube, moveset: impl IntoIterator<Item = Move>) -> Self {
+    pub fn new(start: Cube) -> Self {
+        Self {
+            n: 0,
+            searcher: Searcher::new(start, Move::all()),
+        }
+    }
+
+    pub fn new_with_moveset(start: Cube, moveset: impl IntoIterator<Item = Move>) -> Self {
         Self {
             n: 0,
             searcher: Searcher::new(start, moveset),
@@ -153,6 +166,16 @@ impl IDASearcher {
     pub fn is_frontier(&self) -> bool {
         self.searcher.moves().len() == self.n
     }
+
+    pub fn next_frontier(&mut self) -> Option<Cube> {
+        while let Some(c) = self.next() {
+            if !self.is_frontier() {
+                continue;
+            }
+            return Some(c)
+        }
+        None
+    }
 }
 
 impl Iterator for IDASearcher {
@@ -166,7 +189,7 @@ impl Iterator for IDASearcher {
             Some(c)
         } else {
             self.n += 1;
-            self.searcher = Searcher::default();
+            self.searcher.reset();
             self.searcher.next()
         }
     }

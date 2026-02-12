@@ -1,8 +1,85 @@
-use crate::cube::corners;
 use crate::*;
 use std::array;
 use std::ops::Add;
 use std::sync::LazyLock;
+
+static SYM_CUBE: LazyLock<[Cube; 48]> = LazyLock::new(|| {
+    let m_edges = [Edge::UF, Edge::UB, Edge::DB, Edge::DF];
+    let e_edges = [Edge::FR, Edge::FL, Edge::BL, Edge::BR];
+    let s_edges = [Edge::UR, Edge::DR, Edge::DL, Edge::UL];
+    let m3 = Cube::from(Edges::cycle_eolr(m_edges) + Edges::flip(m_edges));
+    let e3 = Cube::from(Edges::cycle_eoud(e_edges) + Edges::flip(e_edges));
+    let s = Cube::from(Edges::cycle_eolr(s_edges) + Edges::flip(s_edges));
+
+    let lr = Cube {
+        edges: (Edges::cycle_eofb([Edge::UL, Edge::UR])
+            + Edges::cycle_eofb([Edge::DL, Edge::DR])
+            + Edges::cycle_eofb([Edge::FL, Edge::FR])
+            + Edges::cycle_eofb([Edge::BL, Edge::BR])),
+        corners: (Corners::cycle_drud([Corner::UFL, Corner::UFR])
+            + Corners::cycle_drud([Corner::UBL, Corner::UBR])
+            + Corners::cycle_drud([Corner::DFL, Corner::DFR])
+            + Corners::cycle_drud([Corner::DBL, Corner::DBR])),
+    };
+    let mut ret: [Option<Cube>; 48] = [None; 48];
+
+    // TODO make less ugly
+    use Move::*;
+    use Sym::*;
+    ret[UF as usize] = Some(Cube::default());
+    ret[FD as usize] = Some(Cube::from(alg![R, L3]) + m3);      // x
+
+    ret[DB as usize] = Some(ret[FD as usize].unwrap() + ret[FD as usize].unwrap()); // x2
+    ret[BU as usize] = Some(ret[DB as usize].unwrap() + ret[FD as usize].unwrap()); // x'
+    ret[UR as usize] = Some(Cube::from(alg![U, D3]) + e3);      // y
+    ret[UB as usize] = Some(ret[UR as usize].unwrap() + ret[UR as usize].unwrap()); // y2
+    ret[UL as usize] = Some(ret[UB as usize].unwrap() + ret[UR as usize].unwrap()); // y'
+    ret[LF as usize] = Some(Cube::from(alg![F, B3]) + s);       // z
+    ret[DF as usize] = Some(ret[LF as usize].unwrap() + ret[LF as usize].unwrap()); // z2
+    ret[RF as usize] = Some(ret[DF as usize].unwrap() + ret[LF as usize].unwrap()); // z'
+
+    ret[DR as usize] = Some(ret[UL as usize].unwrap() + ret[DB as usize].unwrap());
+    ret[DL as usize] = Some(ret[UR as usize].unwrap() + ret[DB as usize].unwrap());
+    ret[RU as usize] = Some(ret[UL as usize].unwrap() + ret[BU as usize].unwrap());
+    ret[LU as usize] = Some(ret[UR as usize].unwrap() + ret[BU as usize].unwrap());
+    ret[LD as usize] = Some(ret[UL as usize].unwrap() + ret[FD as usize].unwrap());
+    ret[RD as usize] = Some(ret[UR as usize].unwrap() + ret[FD as usize].unwrap());
+    ret[BL as usize] = Some(ret[UL as usize].unwrap() + ret[LF as usize].unwrap());
+    ret[FR as usize] = Some(ret[UR as usize].unwrap() + ret[LF as usize].unwrap());
+    ret[FL as usize] = Some(ret[UL as usize].unwrap() + ret[RF as usize].unwrap());
+    ret[BR as usize] = Some(ret[UR as usize].unwrap() + ret[RF as usize].unwrap());
+    ret[FU as usize] = Some(ret[UB as usize].unwrap() + ret[BU as usize].unwrap());
+    ret[BD as usize] = Some(ret[UB as usize].unwrap() + ret[FD as usize].unwrap());
+    ret[RB as usize] = Some(ret[UB as usize].unwrap() + ret[LF as usize].unwrap());
+    ret[LB as usize] = Some(ret[UB as usize].unwrap() + ret[RF as usize].unwrap());
+    
+    ret[URm as usize] = Some(ret[UR as usize].unwrap() + lr);
+    ret[DRm as usize] = Some(ret[DR as usize].unwrap() + lr);
+    ret[DLm as usize] = Some(ret[DL as usize].unwrap() + lr);
+    ret[ULm as usize] = Some(ret[UL as usize].unwrap() + lr);
+    ret[UFm as usize] = Some(ret[UF as usize].unwrap() + lr);
+    ret[DFm as usize] = Some(ret[DF as usize].unwrap() + lr);
+    ret[DBm as usize] = Some(ret[DB as usize].unwrap() + lr);
+    ret[UBm as usize] = Some(ret[UB as usize].unwrap() + lr);
+    ret[FRm as usize] = Some(ret[FR as usize].unwrap() + lr);
+    ret[BRm as usize] = Some(ret[BR as usize].unwrap() + lr);
+    ret[BLm as usize] = Some(ret[BL as usize].unwrap() + lr);
+    ret[FLm as usize] = Some(ret[FL as usize].unwrap() + lr);
+    ret[RUm as usize] = Some(ret[RU as usize].unwrap() + lr);
+    ret[RDm as usize] = Some(ret[RD as usize].unwrap() + lr);
+    ret[LDm as usize] = Some(ret[LD as usize].unwrap() + lr);
+    ret[LUm as usize] = Some(ret[LU as usize].unwrap() + lr);
+    ret[FUm as usize] = Some(ret[FU as usize].unwrap() + lr);
+    ret[FDm as usize] = Some(ret[FD as usize].unwrap() + lr);
+    ret[BDm as usize] = Some(ret[BD as usize].unwrap() + lr);
+    ret[BUm as usize] = Some(ret[BU as usize].unwrap() + lr);
+    ret[RFm as usize] = Some(ret[RF as usize].unwrap() + lr);
+    ret[RBm as usize] = Some(ret[RB as usize].unwrap() + lr);
+    ret[LBm as usize] = Some(ret[LB as usize].unwrap() + lr);
+    ret[LFm as usize] = Some(ret[LF as usize].unwrap() + lr);
+
+    ret.map(Option::unwrap)
+});
 
 /// Cayley table for the group of 48 cube symmetries
 static SYM_ADD_TABLE: LazyLock<[[Sym; 48]; 48]> = LazyLock::new(|| {
@@ -143,76 +220,7 @@ impl Sym {
     }
 
     pub fn cube(self) -> Cube {
-        use Move::*;
-        use Sym::*;
-        let m_edges = [Edge::UF, Edge::UB, Edge::DB, Edge::DF];
-        let e_edges = [Edge::FR, Edge::FL, Edge::BL, Edge::BR];
-        let s_edges = [Edge::UR, Edge::DR, Edge::DL, Edge::UL];
-        let m3 = Cube::from(Edges::cycle_eolr(m_edges) + Edges::flip(m_edges));
-        let e3 = Cube::from(Edges::cycle_eoud(e_edges) + Edges::flip(e_edges));
-        let s = Cube::from(Edges::cycle_eolr(s_edges) + Edges::flip(s_edges));
-
-        let lr = Cube {
-            edges: (Edges::cycle_eofb([Edge::UL, Edge::UR])
-                + Edges::cycle_eofb([Edge::DL, Edge::DR])
-                + Edges::cycle_eofb([Edge::FL, Edge::FR])
-                + Edges::cycle_eofb([Edge::BL, Edge::BR])),
-            corners: (Corners::cycle_drud([Corner::UFL, Corner::UFR])
-                + Corners::cycle_drud([Corner::UBL, Corner::UBR])
-                + Corners::cycle_drud([Corner::DFL, Corner::DFR])
-                + Corners::cycle_drud([Corner::DBL, Corner::DBR])),
-        };
-
-        match self {
-            UF => Cube::default(),
-            FD => Cube::from(alg![R, L3]) + m3,      // x
-            DB => FD.cube() + FD.cube(),             // x2
-            BU => FD.cube() + FD.cube() + FD.cube(), // x'
-            UR => Cube::from(alg![U, D3]) + e3,      // y
-            UB => UR.cube() + UR.cube(),             // y2
-            UL => UR.cube() + UR.cube() + UR.cube(), // y'
-            LF => Cube::from(alg![F, B3]) + s,       // z
-            DF => LF.cube() + LF.cube(),             // z2
-            RF => LF.cube() + LF.cube() + LF.cube(), // z'
-            DR => UL.cube() + DB.cube(),
-            DL => UR.cube() + DB.cube(),
-            RU => UL.cube() + BU.cube(),
-            LU => UR.cube() + BU.cube(),
-            LD => UL.cube() + FD.cube(),
-            RD => UR.cube() + FD.cube(),
-            BL => UL.cube() + LF.cube(),
-            FR => UR.cube() + LF.cube(),
-            FL => UL.cube() + RF.cube(),
-            BR => UR.cube() + RF.cube(),
-            FU => UB.cube() + BU.cube(),
-            BD => UB.cube() + FD.cube(),
-            RB => UB.cube() + LF.cube(),
-            LB => UB.cube() + RF.cube(),
-            URm => UR.cube() + lr,
-            DRm => DR.cube() + lr,
-            DLm => DL.cube() + lr,
-            ULm => UL.cube() + lr,
-            UFm => UF.cube() + lr,
-            DFm => DF.cube() + lr,
-            DBm => DB.cube() + lr,
-            UBm => UB.cube() + lr,
-            FRm => FR.cube() + lr,
-            BRm => BR.cube() + lr,
-            BLm => BL.cube() + lr,
-            FLm => FL.cube() + lr,
-            RUm => RU.cube() + lr,
-            RDm => RD.cube() + lr,
-            LDm => LD.cube() + lr,
-            LUm => LU.cube() + lr,
-            FUm => FU.cube() + lr,
-            FDm => FD.cube() + lr,
-            BDm => BD.cube() + lr,
-            BUm => BU.cube() + lr,
-            RFm => RF.cube() + lr,
-            RBm => RB.cube() + lr,
-            LBm => LB.cube() + lr,
-            LFm => LF.cube() + lr,
-        }
+        SYM_CUBE[self as usize]
     }
 }
 

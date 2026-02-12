@@ -1,3 +1,4 @@
+use std::ops::{Div, Rem};
 use std::simd::cmp::{SimdOrd, SimdPartialEq};
 use std::simd::mask8x8;
 use std::simd::num::SimdUint;
@@ -209,9 +210,30 @@ pub fn unprank(mut rank: usize) -> u8x8 {
     unlehmer(l)
 }
 
+pub fn index_coud(a: u8x8) -> usize {
+    const MULT: usizex8 = usizex8::from_array([1, 3, 9, 27, 81, 243, 729, 0]);
+    (coud(a).cast() * MULT).reduce_sum()
+}
+
+pub fn unindex_coud(coord: usize) -> u8x8 {
+    debug_assert!(coord < 2187);
+    const MULT: usizex8 = usizex8::from_array([1, 3, 9, 27, 81, 243, 729, 2187]);
+    const THREE: usizex8 = usizex8::splat(3);
+    let mut coud = usizex8::splat(coord).div(MULT).rem(THREE);
+    // infer CO of last corner
+    coud[7] = match coud.reduce_sum() % 3 {
+        0 => 0,
+        1 => 2,
+        2 => 1,
+        _ => unreachable!(),
+    };
+    set_coud(CORNERS_IDENT, coud.cast())
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::collections::HashSet;
 
     #[test]
     fn test_prank_roundtrip() {
@@ -219,5 +241,16 @@ mod test {
             let p = unprank(rank);
             assert_eq!(rank, prank(p));
         }
+    }
+
+    #[test]
+    fn test_coud_roundtrip() {
+        let mut cases = HashSet::<u8x8>::new();
+        for coord in 0..2187 {
+            let case = unindex_coud(coord);
+            assert_eq!(coord, index_coud(case));
+            cases.insert(case);
+        }
+        assert_eq!(cases.len(), 2187);
     }
 }

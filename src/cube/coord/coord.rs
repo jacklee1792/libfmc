@@ -115,6 +115,11 @@ where
         let sym = self.canonicalizer(coord);
         c.conjugate_sym(sym)
     }
+
+    pub fn self_syms(&self, coord: usize) -> Set64<Sym> {
+        let cls = self.coord_cls[coord];
+        self.class_ssym[cls]
+    }
 }
 
 #[cfg(test)]
@@ -125,5 +130,22 @@ mod tests {
     pub fn test_coordsyms_eofb() {
         let c = CoordSyms::<CoordEOFB>::new();
         assert_eq!(c.n_classes(), 336);
+        for i in 0..2048 {
+            let cube = CoordEOFB::unindex(i);
+            for s in c.self_syms(i).into_iter() {
+                assert_eq!(
+                    CoordEOFB::index(cube),
+                    CoordEOFB::index(cube.conjugate_sym(s))
+                );
+            }
+        }
+        assert_eq!(CoordEOFB::index(Cube::default()), 0);
+    }
+
+    #[test]
+    pub fn test_coordsyms_coud() {
+        let c = CoordSyms::<CoordCOUD>::new();
+        assert_eq!(c.n_classes(), 168);
+        assert_eq!(CoordCOUD::index(Cube::default()), 0);
     }
 }

@@ -280,6 +280,14 @@ impl Corners {
     pub fn apply_alg(&self, a: &Alg) -> Self {
         a.iter().fold(*self, |acc, m| acc.apply_move(m))
     }
+
+    pub fn index_coud(self) -> usize {
+        ops::index_coud(self.0)
+    }
+
+    pub fn unindex_coud(coord: usize) -> Self {
+        Self(ops::unindex_coud(coord))
+    }
 }
 
 // CO methods

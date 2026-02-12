@@ -8,7 +8,7 @@ use crate::*;
 use super::*;
 
 #[derive(Clone)]
-pub struct Alg(Vec<Move>);
+pub struct Alg(pub Vec<Move>);
 
 #[macro_export]
 macro_rules! alg {
