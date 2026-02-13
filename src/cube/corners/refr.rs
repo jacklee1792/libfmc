@@ -25,7 +25,7 @@ impl<'a> CornerRef<'a> {
     pub fn cofb(&self) -> CO {
         let slot = self.slot as usize;
         let mut co = self.coud();
-        if lane_htrbad(self.corners.0, slot) {
+        if ops::lane_htrbad(self.corners.0, slot) {
             co = co + ops::COUD_TO_COFB[slot].into()
         }
         co
@@ -35,7 +35,7 @@ impl<'a> CornerRef<'a> {
     pub fn colr(&self) -> CO {
         let slot = self.slot as usize;
         let mut co = self.coud();
-        if lane_htrbad(self.corners.0, slot) {
+        if ops::lane_htrbad(self.corners.0, slot) {
             co = co + ops::COUD_TO_COLR[slot].into()
         }
         co

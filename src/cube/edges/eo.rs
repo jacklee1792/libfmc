@@ -26,7 +26,7 @@ impl From<u8> for EO {
 }
 
 impl EO {
-    fn inverse(&self) -> Self {
+    pub fn inverse(&self) -> Self {
         match self {
             EO::Solved => EO::Flipped,
             EO::Flipped => EO::Solved,

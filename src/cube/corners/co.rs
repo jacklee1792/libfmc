@@ -30,7 +30,7 @@ impl From<u8> for CO {
 }
 
 impl CO {
-    fn inverse(&self) -> Self {
+    pub fn inverse(&self) -> Self {
         match self {
             CO::Solved => CO::Solved,
             CO::CCW => CO::CW,

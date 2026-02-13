@@ -13,7 +13,7 @@ impl Spy {
         print!("Enter scramble: ");
         stdin.lock().read_line(&mut scramble).unwrap();
         let scramble = Alg::try_from(scramble.as_str()).unwrap();
-        let inverse = Cube::default().apply_alg(scramble);
+        let _inverse = Cube::default().apply_alg(scramble);
         Spy {
             cube: Cube::default(),
             stack: Alg::new(),

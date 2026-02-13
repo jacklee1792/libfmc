@@ -1,10 +1,8 @@
 use std::ops::{BitAnd, Shr};
-use std::simd::cmp::{SimdOrd, SimdPartialEq};
+use std::simd::cmp::SimdPartialEq;
 use std::simd::mask8x16;
 use std::simd::num::SimdUint;
 use std::simd::{u8x16, usizex16};
-
-use crate::CORNERS_IDENT;
 
 // Lane Layout:
 // EOUD EOLR EOFB EP EP EP EP

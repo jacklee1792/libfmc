@@ -172,7 +172,7 @@ impl IDASearcher {
             if !self.is_frontier() {
                 continue;
             }
-            return Some(c)
+            return Some(c);
         }
         None
     }

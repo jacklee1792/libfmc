@@ -17,7 +17,7 @@ impl From<u8> for Axis {
 
 impl Axis {
     /// The slice that this axis runs perpendicular to.
-    const fn slice(self) -> Slice {
+    pub const fn slice(self) -> Slice {
         Slice::from_u8(self as u8)
     }
 

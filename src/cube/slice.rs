@@ -24,7 +24,7 @@ impl From<u8> for Slice {
 }
 
 impl Slice {
-    const fn edges(self) -> [Edge; 4] {
+    pub const fn edges(self) -> [Edge; 4] {
         use Edge::*;
         match self {
             Slice::S => [UL, UR, DL, DR],

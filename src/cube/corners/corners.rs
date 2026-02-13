@@ -106,7 +106,7 @@ impl Corners {
     /// The slot where the given `Corner` currently resides.
     pub fn find(self, corner: Corner) -> Corner {
         let target = u8x8::splat(corner as u8);
-        let cp = self.0 & CP_MASK;
+        let cp = self.0 & ops::CP_MASK;
         let slot = cp.simd_eq(target).first_set().unwrap() as u8;
         Corner::from(slot)
     }
@@ -128,7 +128,7 @@ impl Corners {
         for (i, lane) in a.iter_mut().enumerate() {
             let slot = Corner::from(i as u8);
             let piece = f(slot);
-            *lane = (*lane & CO_LANE_MASK) | (piece as u8);
+            *lane = (*lane & ops::CO_LANE_MASK) | (piece as u8);
         }
         Self(u8x8::from_array(a))
     }
@@ -143,7 +143,7 @@ impl Corners {
             let src = Corner::from(i as u8);
             let dest = f(src) as usize;
             let lane = &mut a[dest];
-            *lane = (*lane & CO_LANE_MASK) | (src as u8);
+            *lane = (*lane & ops::CO_LANE_MASK) | (src as u8);
         }
         Self(u8x8::from_array(a))
     }
@@ -167,7 +167,7 @@ impl Corners {
         I: IntoIterator<Item = Corner>,
     {
         let cycle = cycle.into_iter().collect::<Vec<_>>();
-        let mut cp = CORNERS_IDENT;
+        let mut cp = ops::CORNERS_IDENT;
         let n = cycle.len();
         for i in 0..n {
             let src = cycle[i] as u8;
@@ -200,8 +200,8 @@ impl Corners {
     }
 
     pub fn compose(self, rhs: Self) -> Self {
-        let ret = self.0.swizzle_dyn(rhs.0 & CP_MASK) + (rhs.0 & CO_MASK);
-        Self(ret.simd_min(ret - CO_MASK))
+        let ret = self.0.swizzle_dyn(rhs.0 & ops::CP_MASK) + (rhs.0 & ops::CO_MASK);
+        Self(ret.simd_min(ret - ops::CO_MASK))
     }
 
     pub fn inverse(self) -> Self {
@@ -210,7 +210,7 @@ impl Corners {
         // CP, we can take it to the 839th power.
         let inv_cp = {
             let f = |x: Self, y: Self| Self(x.0.swizzle_dyn(ops::cp(y.0)));
-            let s1 = Self(self.0 & CP_MASK);
+            let s1 = Self(self.0 & ops::CP_MASK);
             let s2 = f(s1, s1);
             let s4 = f(s2, s2);
             let s8 = f(s4, s4);
@@ -273,7 +273,7 @@ impl Corners {
             .apply_sym(s.inverse())
     }
 
-    pub fn apply_rotation(self, r: Rotation) -> Self {
+    pub fn apply_rotation(self, _r: Rotation) -> Self {
         todo!()
     }
 
@@ -406,7 +406,6 @@ impl Corners {
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use std::fmt::Debug;
 
     #[test]
     fn test_set_co() {
@@ -486,6 +485,7 @@ mod tests {
         )
     }
 
+    #[test]
     fn test_gen_rotate() {
         let mut s = String::new();
         for m in Move::all() {
@@ -531,6 +531,7 @@ mod tests {
         )
     }
 
+    #[test]
     fn foo() {
         let c = Corners::new().apply_move(Move::B);
         println!("{:?}", c.at(Corner::UBL).cofb())

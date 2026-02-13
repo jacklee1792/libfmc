@@ -14,7 +14,7 @@ impl From<u8> for Tetrad {
 }
 
 impl Tetrad {
-    const fn corners(&self) -> [Corner; 4] {
+    pub const fn corners(&self) -> [Corner; 4] {
         todo!()
     }
 

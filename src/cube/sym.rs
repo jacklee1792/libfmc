@@ -27,14 +27,14 @@ static SYM_CUBE: LazyLock<[Cube; 48]> = LazyLock::new(|| {
     use Move::*;
     use Sym::*;
     ret[UF as usize] = Some(Cube::default());
-    ret[FD as usize] = Some(Cube::from(alg![R, L3]) + m3);      // x
+    ret[FD as usize] = Some(Cube::from(alg![R, L3]) + m3); // x
 
     ret[DB as usize] = Some(ret[FD as usize].unwrap() + ret[FD as usize].unwrap()); // x2
     ret[BU as usize] = Some(ret[DB as usize].unwrap() + ret[FD as usize].unwrap()); // x'
-    ret[UR as usize] = Some(Cube::from(alg![U, D3]) + e3);      // y
+    ret[UR as usize] = Some(Cube::from(alg![U, D3]) + e3); // y
     ret[UB as usize] = Some(ret[UR as usize].unwrap() + ret[UR as usize].unwrap()); // y2
     ret[UL as usize] = Some(ret[UB as usize].unwrap() + ret[UR as usize].unwrap()); // y'
-    ret[LF as usize] = Some(Cube::from(alg![F, B3]) + s);       // z
+    ret[LF as usize] = Some(Cube::from(alg![F, B3]) + s); // z
     ret[DF as usize] = Some(ret[LF as usize].unwrap() + ret[LF as usize].unwrap()); // z2
     ret[RF as usize] = Some(ret[DF as usize].unwrap() + ret[LF as usize].unwrap()); // z'
 
@@ -52,7 +52,7 @@ static SYM_CUBE: LazyLock<[Cube; 48]> = LazyLock::new(|| {
     ret[BD as usize] = Some(ret[UB as usize].unwrap() + ret[FD as usize].unwrap());
     ret[RB as usize] = Some(ret[UB as usize].unwrap() + ret[LF as usize].unwrap());
     ret[LB as usize] = Some(ret[UB as usize].unwrap() + ret[RF as usize].unwrap());
-    
+
     ret[URm as usize] = Some(ret[UR as usize].unwrap() + lr);
     ret[DRm as usize] = Some(ret[DR as usize].unwrap() + lr);
     ret[DLm as usize] = Some(ret[DL as usize].unwrap() + lr);

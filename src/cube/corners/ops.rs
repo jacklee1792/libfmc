@@ -153,7 +153,7 @@ pub fn lane_set_colr(a: u8x8, i: usize, colr: u8) -> u8x8 {
 }
 
 /// select corners which have ud sticker facing fb
-pub fn armlr(a: u8x8) -> mask8x8 {
+pub fn armlr(_a: u8x8) -> mask8x8 {
     todo!()
 }
 

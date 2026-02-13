@@ -52,29 +52,11 @@ where
 
     /// Given a cube, produce a lower bound on the number of moves to reduce the coordinate to 0.
     pub fn eval(&self, c: Cube) -> usize {
-        let coord = Self::coord(&self.rsym, c);
+        let c = self.rsym.canonicalize(c);
+        let r_coord = self.rsym.conjugacy_class(R::index(c));
+        let c_coord = C::index(c);
+        let coord = r_coord * C::N_VALUES + c_coord;
         self.dist[coord] as usize
-    }
-
-    /// Compute the symmetry-reduced composite coordinate.
-    fn coord(rsym: &CoordSyms<R>, c: Cube) -> usize {
-        let c = rsym.canonicalize(c);
-        let r = rsym.conjugacy_class(R::index(c));
-        let c = C::index(c);
-        r * C::N_VALUES + c
-    }
-
-    /// Compute the symmetry-reduced composite coordinate for a cube which already has its
-    /// symmetry-reduced coordinate canonicalized.
-    fn coord_no_canonicalize(rsym: &CoordSyms<R>, c: Cube) -> usize {
-        let r = rsym.conjugacy_class(R::index(c));
-        let c = C::index(c);
-        r * C::N_VALUES + c
-    }
-
-    /// Decompose the coordinate into its symmetry-composed and basic component, respectively.
-    fn decompose_coord(coord: usize) -> (usize, usize) {
-        (coord / C::N_VALUES, coord % C::N_VALUES)
     }
 }
 
@@ -102,7 +84,10 @@ mod tests {
     #[test]
     fn test_solve_dr() {
         let pt = PruneTable::<CoordEOFB, CoordCOUD>::new();
-        let alg = Alg::try_from("R' U' F B2 R2 B2 F L2 B D2 B' L2 R2 D2 F' D L' B F' D L' B' L2 B2 R' U' F").unwrap();
+        let alg = Alg::try_from(
+            "R' U' F B2 R2 B2 F L2 B D2 B' L2 R2 D2 F' D L' B F' D L' B' L2 B2 R' U' F",
+        )
+        .unwrap();
         let start = Cube::from_alg(alg);
         let mut s = IDASearcher::new(start);
         while let Some(c) = s.next() {
