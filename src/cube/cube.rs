@@ -44,6 +44,10 @@ impl Cube {
         Self::default()
     }
 
+    pub fn from_move(m: Move) -> Self {
+        Self::new().apply_move(m)
+    }
+
     pub fn from_alg<A>(a: A) -> Self
     where
         A: Into<Alg>,

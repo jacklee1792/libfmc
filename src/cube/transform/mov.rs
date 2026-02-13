@@ -1,7 +1,25 @@
+use std::array;
 use std::fmt::Display;
 use std::ops::Add;
+use std::sync::LazyLock;
 
 use crate::*;
+
+static MOVE_SYM_CONJ: LazyLock<[[Move; 48]; 18]> = LazyLock::new(|| {
+    array::from_fn(|i| {
+        let m = Move::from(i as u8);
+        array::from_fn(|j| {
+            let s = Sym::from(j as u8);
+            let c = Cube::from_move(m).conjugate_sym(s);
+            for m2 in Move::all() {
+                if c == Cube::from_move(m2) {
+                    return m2;
+                }
+            }
+            unreachable!()
+        })
+    })
+});
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -223,15 +241,29 @@ impl Move {
     pub fn canonically_precedes(self, next: Self) -> bool {
         next.canonically_succeeds(self)
     }
+
+    pub fn conjugate_sym(self, s: Sym) -> Self {
+        MOVE_SYM_CONJ[self as usize][s as usize]
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::*;
+
     #[test]
     fn test_canonical() {
         use Move::*;
         assert_eq!(D.canonically_succeeds(U), true);
         assert_eq!(U.canonically_succeeds(D), false);
+    }
+
+    #[test]
+    fn test_conj() {
+        use Move::*;
+        assert_eq!(F.conjugate_sym(Sym::UR), R);
+        assert_eq!(L3.conjugate_sym(Sym::UFm), R);
+        assert_eq!(D2.conjugate_sym(Sym::DB), U2);
+        assert_eq!(U.conjugate_sym(Sym::FR), F);
     }
 }
