@@ -271,7 +271,6 @@ mod tests {
                 .unwrap(),
         );
 
-        use Move::*;
         let c2 = c.apply_alg("R U L F B".try_into().unwrap());
         println!("{:?}", c2.edges);
     }

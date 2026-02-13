@@ -163,7 +163,7 @@ pub async fn run_protocol(mut cube: Cube) {
 
 use btleplug::api::{Central, CentralEvent, Manager as _, bleuuid::uuid_from_u16};
 use btleplug::platform::Manager;
-use std::io::{self, Write};
+// use std::io::{self, Write};
 
 use anyhow::{Result, anyhow, bail};
 use btleplug::api::BDAddr;
@@ -224,13 +224,13 @@ impl<'a> C2aMessage<'a> {
 
 #[derive(Debug)]
 pub struct CubeState {
-    facelets: [u8; 54],
+    _facelets: [u8; 54],
 }
 
 impl CubeState {
     pub fn from_raw(raw: &[u8]) -> Self {
         Self {
-            facelets: raw
+            _facelets: raw
                 .iter()
                 .flat_map(|&x| [x & 0xf, (x & 0xF0) >> 4])
                 .collect::<Vec<_>>()
@@ -342,7 +342,7 @@ pub fn make_app_hello(mac: BDAddr) -> Vec<u8> {
 }
 
 /// Given the bytes of an **decrypted** message, parse them into a cube->app message.
-pub fn parse_c2a_message(bytes: &[u8]) -> Result<C2aMessage> {
+pub fn parse_c2a_message<'a>(bytes: &'a [u8]) -> Result<C2aMessage<'a>> {
     let mut p = Parser { bytes };
 
     if p.get_u8(0)? != 0xfe {
