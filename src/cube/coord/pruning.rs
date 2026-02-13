@@ -4,13 +4,16 @@ use std::marker::PhantomData;
 use crate::*;
 
 pub struct PruneTable<C>
-where C: Coord {
+where
+    C: Coord,
+{
     dist: Vec<u8>,
     _c: PhantomData<C>,
 }
 
 impl<C> PruneTable<C>
-where C: Coord,
+where
+    C: Coord,
 {
     pub fn new() -> Self {
         let mut dist = vec![None; C::N_VALUES];
@@ -37,7 +40,7 @@ where C: Coord,
     pub fn eval(&self, c: Cube) -> usize {
         let coord = C::index(c);
         self.dist[coord] as usize
-    } 
+    }
 }
 
 /// Pruning table for a composite coordinate (R, C), where R is reduced by symmetry.
