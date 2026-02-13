@@ -3,8 +3,45 @@ use std::marker::PhantomData;
 
 use crate::*;
 
+pub struct PruneTable<C>
+where C: Coord {
+    dist: Vec<u8>,
+    _c: PhantomData<C>,
+}
+
+impl<C> PruneTable<C>
+where C: Coord,
+{
+    pub fn new() -> Self {
+        let mut dist = vec![None; C::N_VALUES];
+        let mut q: VecDeque<(Cube, u8)> = VecDeque::new();
+        dist[0] = Some(0);
+        q.push_back((Cube::default(), 0));
+        while let Some((a, d)) = q.pop_front() {
+            for m in Move::all() {
+                let b = a.apply_move(m);
+                let coord = C::index(b);
+                if dist[coord].is_none() {
+                    dist[coord] = Some(d + 1);
+                    q.push_back((b, d + 1));
+                }
+            }
+        }
+        let dist = dist.into_iter().map(Option::unwrap).collect::<Vec<_>>();
+        Self {
+            dist,
+            _c: PhantomData,
+        }
+    }
+
+    pub fn eval(&self, c: Cube) -> usize {
+        let coord = C::index(c);
+        self.dist[coord] as usize
+    } 
+}
+
 /// Pruning table for a composite coordinate (R, C), where R is reduced by symmetry.
-pub struct PruneTable<R, C>
+pub struct SymPruneTable<R, C>
 where
     R: Coord,
     C: Coord,
@@ -15,7 +52,7 @@ where
     _c: PhantomData<C>,
 }
 
-impl<R, C> PruneTable<R, C>
+impl<R, C> SymPruneTable<R, C>
 where
     R: Coord,
     C: Coord,
@@ -67,7 +104,7 @@ mod tests {
     #[test]
     fn test_prune() {
         let mut s = IDASearcher::new(Cube::default());
-        let pt = PruneTable::<CoordEOFB, CoordCOUD>::new();
+        let pt = SymPruneTable::<CoordEOFB, CoordCOUD>::new();
         while let Some(c) = s.next_frontier() {
             if s.moves().len() > 4 {
                 break;
@@ -83,7 +120,7 @@ mod tests {
 
     #[test]
     fn test_solve_dr() {
-        let pt = PruneTable::<CoordEOFB, CoordCOUD>::new();
+        let pt = SymPruneTable::<CoordEOFB, CoordCOUD>::new();
         let alg = Alg::try_from(
             "R' U' F B2 R2 B2 F L2 B D2 B' L2 R2 D2 F' D L' B F' D L' B' L2 B2 R' U' F",
         )

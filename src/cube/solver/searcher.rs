@@ -233,11 +233,16 @@ mod tests {
             Alg::try_from("R' U' F R F' R' B' L' D' B2 L' D B2 R' B2 D2 B2 L' F2 L U2 D2 R' U' F")
                 .unwrap(),
         );
+        let pt: PruneTable<CoordEOFB> = PruneTable::new();
         let mut s = Searcher::new(c, Move::all());
         let mut count = 0;
         while let Some(c) = s.next() {
             let n = s.moves().len();
-            if n == 7 || c.is_eofb() {
+            if n + pt.eval(c) > 7 {
+                s.prune();
+                continue;
+            }
+            if c.is_eofb() {
                 s.prune();
             }
             let is_canonical = (|| {
@@ -257,7 +262,6 @@ mod tests {
                 !m2.commutes_with(m) || m2.is_clockwise()
             })();
             if c.is_eofb() && is_canonical {
-                println!("{}", s.moves().alg());
                 count += 1;
             }
         }
